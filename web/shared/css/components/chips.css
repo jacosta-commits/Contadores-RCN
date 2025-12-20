@@ -1,0 +1,39 @@
+/* chips.css */
+.chip-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  -webkit-tap-highlight-color: transparent;
+  border: 1.5px solid var(--bg-650, #1f2633);
+  background: var(--bg-800, #0f1525);
+  color: var(--fg-200, #d7e0ff);
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .08s ease, box-shadow .15s ease, background .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.chip:hover { transform: translateY(-1px); }
+
+.chip:focus-visible {
+  outline: 2px solid var(--brand-400, #6c8cff);
+  outline-offset: 2px;
+}
+
+/* Seleccionado: soporta aria o clase */
+.chip[aria-checked="true"],
+.chip.is-selected {
+  background: var(--brand-600, #4d66ff);
+  border-color: var(--brand-400, #6c8cff);
+  color: #fff;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-400, #6c8cff) 35%, transparent);
+}
+
+.chip:active { transform: translateY(0); }

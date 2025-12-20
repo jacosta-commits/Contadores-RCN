@@ -1,0 +1,74 @@
+:root {
+  /* ══════════════════════════════════════════════════════════
+     CONTADORES_02 DESIGN SYSTEM
+     Migrated from Contadores_02/public/operario/css/main.css
+     ══════════════════════════════════════════════════════════ */
+
+  /* Paleta base */
+  --bg:        #0b1220;
+  --bg-2:      #0d1b2a;
+  --surface:   #101a2d;
+  --surface-2: #131f36;
+  --text:      #e6edf7;
+  --muted:     #9fb2c7;
+  --border:    #22324b;
+
+  /* Acentos */
+  --accent:    #60a5fa; /* Blue-ish */
+  --ok:        #00a676; /* Green */
+  --warn:      #facc15; /* Yellow */
+  --danger:    #ef4444; /* Red */
+
+  /* Dimensiones */
+  --header-h:  60px;
+  --footer-h: 15vh; 
+
+  /* Radios y sombras */
+  --radius:    14px;
+  --shadow-1:  0 8px 20px rgba(0,0,0,.28);
+  --shadow-2:  0 14px 36px rgba(0,0,0,.42), 0 4px 12px rgba(0,0,0,.28);
+
+  /* Tipografía */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --fz-12:     clamp(11px,1.2vw,12px);
+  --fz-14:     clamp(12px,1.4vw,14px);
+  --fz-16:     clamp(14px,1.6vw,16px);
+  --fz-18:     clamp(15px,1.8vw,18px);
+  --fz-20:     clamp(16px,2.0vw,20px);
+
+  /* ══════════════════════════════════════════════════════════
+     LEGACY MAPPINGS (for RCN compatibility)
+     ══════════════════════════════════════════════════════════ */
+  
+  /* Colors */
+  --color-primary: var(--accent);
+  --color-success: var(--ok);
+  --color-warning: var(--warn);
+  --color-danger:  var(--danger);
+  
+  --color-bg-dark: var(--bg);
+  --color-bg-darker: var(--bg-2);
+  --color-card-bg: var(--surface);
+  --color-card-bg-hover: var(--surface-2);
+  
+  --color-text-primary: var(--text);
+  --color-text-secondary: var(--muted);
+  --color-text-muted: #5c6b7f;
+  
+  --color-border: var(--border);
+  
+  /* Spacing/Radius */
+  --radius-md: var(--radius);
+  --radius-lg: 16px;
+  
+  /* Shadows */
+  --shadow-md: var(--shadow-1);
+  --shadow-lg: var(--shadow-2);
+}
+
+@supports (height: 1dvh) {
+  :root{ --footer-h: 15dvh; }
+}
+@supports (height: 1lvh) {
+  :root{ --footer-h: 15lvh; }
+}

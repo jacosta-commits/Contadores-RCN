@@ -1,0 +1,824 @@
+/* apps/Contadores/public/operario/css/main.css
+   ─────────────────────────────────────────────────────────────────────────────
+   ZENTRIK • Shell de la app (Header, Footer, Layout)
+   - Respeta SIEMPRE el footer (sin superposiciones)
+   - Usa 100dvh y safe-area para móviles/iOS
+   - Dos modos: single-column y two-columns
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ─────────────────────────── Tokens de diseño ─────────────────────────── */
+:root {
+  /* Paleta base */
+  --bg: #0b1220;
+  --bg-2: #0d1b2a;
+  --surface: #101a2d;
+  --surface-2: #131f36;
+  --text: #e6edf7;
+  --muted: #9fb2c7;
+  --border: #22324b;
+
+  /* Acentos */
+  --accent: #60a5fa;
+  --ok: #00a676;
+
+  /* Dimensiones */
+  --header-h: 60px;
+  --footer-h: 15vh;
+
+  @supports (height: 1dvh) {
+    :root {
+      --footer-h: 15dvh;
+    }
+
+    /* 15% del viewport dinámico */
+  }
+
+  @supports (height: 1lvh) {
+    :root {
+      --footer-h: 15lvh;
+    }
+
+    /* Safari/iOS estable */
+  }
+
+  /* Radios y sombras */
+  --radius: 14px;
+  --shadow-1: 0 8px 20px rgba(0, 0, 0, .28);
+  --shadow-2: 0 14px 36px rgba(0, 0, 0, .42),
+  0 4px 12px rgba(0, 0, 0, .28);
+
+  /* Tipografía */
+  --fz-12: clamp(11px, 1.2vw, 12px);
+  --fz-14: clamp(12px, 1.4vw, 14px);
+  --fz-16: clamp(14px, 1.6vw, 16px);
+  --fz-18: clamp(15px, 1.8vw, 18px);
+  --fz-20: clamp(16px, 2.0vw, 20px);
+}
+
+/* ─────────────────────────── Reset & Base ─────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background:
+    radial-gradient(1100px 700px at 110% -10%, rgba(96, 165, 250, .10), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, rgba(0, 166, 118, .10), transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  /* si el contenido total excede, permite scroll del documento */
+  overflow: hidden auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utilidades */
+.hidden {
+  display: none !important;
+}
+
+.fade-out {
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+
+/* ─────────────────────────── Header fijo ─────────────────────────── */
+#mainHeader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(14px, 2.2vw, 22px);
+  z-index: 1000;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, var(--surface-2) 0%, #0f1628 100%);
+  border-bottom: 1px solid #2b374a;
+  box-shadow: var(--shadow-1);
+  color: var(--text);
+  font-size: var(--fz-16);
+}
+
+#mainHeader .header-info {
+  display: flex;
+  gap: clamp(10px, 2.2vw, 18px);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#mainHeader .header-info strong {
+  color: #facc15;
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+#mainHeader .header-info span {
+  color: var(--text);
+}
+
+/* Pares label+valor pegados entre sí, pero separados del siguiente par */
+#mainHeader .header-info {
+  gap: clamp(14px, 2.4vw, 28px);
+  /* espacio ENTRE pares */
+}
+
+#mainHeader .header-info .info-pair {
+  display: flex;
+  align-items: baseline;
+  gap: .35rem;
+  /* espacio DENTRO del par (Código: 00787) */
+  white-space: nowrap;
+  /* evita saltos entre label y valor */
+}
+
+#mainHeader .header-info .info-pair strong {
+  margin: 0;
+}
+
+#mainHeader .header-info .info-pair span {
+  margin: 0;
+}
+
+
+/* Botón del header */
+.btn-header {
+  background: linear-gradient(180deg, #7cc0ff 0%, var(--accent) 100%);
+  color: #061a2a;
+  border: 1px solid transparent;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: var(--fz-16);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 18px rgba(96, 165, 250, .22);
+  transition: filter .15s ease, transform .06s ease;
+}
+
+.btn-header:hover {
+  filter: brightness(1.05);
+}
+
+.btn-header:active {
+  transform: translateY(1px);
+}
+
+/* ─────────────────────────── Footer fijo ─────────────────────────── */
+#mainFooter {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--footer-h);
+  padding: 0 clamp(12px, 2vw, 20px);
+  /* safe-area para iPhone con notch */
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px));
+  z-index: 1000;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, #0f1628 0%, var(--surface-2) 100%);
+  border-top: 1px solid #243049;
+  box-shadow: var(--shadow-1);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 1.2vmin, 14px);
+}
+
+/* Botones HMI del footer */
+.btnFooter {
+  width: clamp(120px, calc(var(--footer-h) * 1.6), 260px);
+  height: var(--footer-h);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .00)),
+    linear-gradient(180deg, #0f1a2e 0%, #0d1730 100%);
+  color: var(--text);
+  border: 1px solid #22324b;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: clamp(12px, calc(var(--footer-h) * 0.22), 22px);
+  text-align: center;
+  padding: 6px;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.btnFooter:hover {
+  border-color: rgba(96, 165, 250, .4);
+  box-shadow: 0 12px 26px rgba(96, 165, 250, .18);
+}
+
+.btnFooter:active {
+  transform: translateY(1px);
+}
+
+.icon-emoji {
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* Reloj en vivo */
+.live-clock-footer {
+  position: absolute;
+  right: clamp(10px, 2vw, 20px);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: clamp(16px, calc(var(--footer-h) * 0.36), 32px);
+  color: var(--ok);
+  font-weight: 700;
+  letter-spacing: .3px;
+  user-select: none;
+  pointer-events: none;
+  text-shadow: 0 0 8px rgba(0, 166, 118, .25);
+}
+
+
+/* ─────────────────────────── Layout principal ─────────────────────────── */
+/* El área central respeta SIEMPRE header y footer, incluyendo safe-area */
+#app {
+  position: fixed;
+  /* top / right / bottom / left */
+  inset: var(--header-h) 0 calc(var(--footer-h) + env(safe-area-inset-bottom, 0px)) 0;
+
+  /* altura explícita para navegadores móviles (evita 100vh “mentiroso”) */
+  min-height: calc(100lvh - var(--header-h) - var(--footer-h) - env(safe-area-inset-bottom, 0px));
+
+  display: flex;
+  overflow: hidden;
+  /* cada panel maneja su propio scroll */
+  isolation: isolate;
+}
+
+/* Modos de layout */
+.single-column {
+  flex-direction: row;
+  width: 100%;
+}
+
+.two-columns {
+  flex-direction: row;
+}
+
+/* Paneles */
+.panel-contadores,
+.panel-turno {
+  height: 100%;
+  min-height: 0;
+  /* IMPORTANTE: permite que el hijo scrollee dentro */
+  overflow: auto;
+  padding: clamp(8px, 1.4vw, 14px);
+  background: transparent;
+  container-type: inline-size;
+}
+
+/* En two-columns: 30/70 con límites y sin solapar footer */
+.two-columns .panel-contadores {
+  flex: 0 0 clamp(320px, 36%, 520px);
+  border-right: 1px solid #0b1322;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, 0));
+}
+
+.two-columns .panel-turno {
+  flex: 1 1 auto;
+}
+
+/* En single-column dejamos contadores expandir; el panel de turno lo maneja JS */
+.single-column .panel-contadores {
+  flex: 1 1 auto;
+}
+
+.single-column .panel-turno {
+  flex: 0 0 auto;
+}
+
+/* ─────────────────────────── Scrollbar estética ─────────────────────────── */
+.panel-contadores::-webkit-scrollbar,
+.panel-turno::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.panel-contadores::-webkit-scrollbar-thumb,
+.panel-turno::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #44608a, #31496d);
+  border-radius: 20px;
+  border: 2px solid rgba(0, 0, 0, .25);
+}
+
+.panel-contadores::-webkit-scrollbar-track,
+.panel-turno::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, .05);
+  border-radius: 20px;
+}
+
+/* ─────────────────────────── Responsivo ─────────────────────────── */
+@media (max-width: 980px) {
+  .two-columns .panel-contadores {
+    flex-basis: clamp(280px, 40%, 480px);
+  }
+}
+
+@media (max-width: 760px) {
+  .two-columns .panel-contadores {
+    flex-basis: clamp(260px, 44%, 440px);
+  }
+
+  .live-clock-footer {
+    font-size: clamp(14px, 4.2vw, 20px);
+  }
+}
+
+@media (max-width: 640px) {
+  #mainFooter {
+    gap: 8px;
+  }
+
+  .btnFooter {
+    width: 88px;
+  }
+}
+
+body.kb-open #mainFooter {
+  visibility: hidden;
+  /* no colapsa el alto */
+  opacity: 0;
+}
+
+body.kb-open #mainFooter * {
+  pointer-events: none;
+}
+
+.tickets-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, .25);
+}
+
+/* ───────── Drawer de Tickets ───────── */
+.tickets-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 12, 22, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 5000;
+}
+
+.tickets-drawer {
+  position: fixed;
+  top: var(--header-h);
+  bottom: var(--footer-h);
+  right: 0;
+  width: clamp(300px, 38vw, 520px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-2);
+  z-index: 6000;
+  transform: translateX(100%);
+  transition: transform .18s ease-out;
+  display: grid;
+  grid-template-rows: max-content max-content 1fr;
+  container-type: size;
+}
+
+.tickets-drawer.open {
+  transform: translateX(0);
+}
+
+.tickets-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid #243049;
+}
+
+.tickets-header h3 {
+  margin: 0;
+  font-size: var(--fz-18);
+  color: var(--text);
+}
+
+#ticketsCount {
+  color: #9fb2c7;
+  font-weight: 600;
+}
+
+.tickets-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #0f1a2e;
+  color: #e6edf7;
+  cursor: pointer;
+}
+
+.tickets-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #22324b;
+}
+
+.tickets-toolbar .tkf {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #0f1a2e;
+  color: var(--text);
+  cursor: pointer;
+  font-size: var(--fz-14);
+}
+
+.tickets-toolbar .tkf.active {
+  background: #173056;
+  border-color: #2b4c7a;
+}
+
+.tickets-list {
+  overflow: auto;
+  padding: 8px 10px 12px;
+  display: grid;
+  gap: 10px;
+}
+
+/* Fila de ticket */
+.tk-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: #0f1a2e;
+}
+
+.tk-main {
+  display: grid;
+  gap: 4px;
+}
+
+.tk-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-weight: 800;
+  color: #facc15;
+}
+
+.tk-sub {
+  font-size: var(--fz-14);
+  color: #9fb2c7;
+}
+
+.tk-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tk-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid #2b4c7a;
+  color: #cfe1ff;
+  background: #11203a;
+}
+
+.tk-timer {
+  font-weight: 800;
+}
+
+.tk-actions {
+  gap: clamp(8px, 1.4cqh, 14px);
+}
+
+.tk-btn {
+  border-radius: clamp(8px, 1.2cqh, 12px);
+  padding: clamp(8px, 1.4cqh, 12px) clamp(12px, 2.2cqw, 18px);
+  font-size: clamp(12px, 2cqh, 20px);
+}
+
+.tk-btn.attend {
+  background: linear-gradient(180deg, #ffe27a 0%, #ffeb3b 100%);
+  color: #061a2a;
+}
+
+.tk-btn.cancel {
+  background: linear-gradient(180deg, #ff7b7b 0%, #ef4444 100%);
+  color: #2a0707;
+}
+
+/* ─── Tipografía + espaciado fluidos dentro del drawer (XL) ─── */
+.tickets-header {
+  padding: clamp(12px, 2cqh, 22px) clamp(14px, 2.6cqw, 22px);
+}
+
+.tickets-header h3 {
+  font-size: clamp(18px, 3cqh, 36px);
+}
+
+.tickets-close,
+.tk-close {
+  width: clamp(36px, 4.2cqh, 56px);
+  height: clamp(36px, 4.2cqh, 56px);
+  font-size: clamp(16px, 2cqh, 24px);
+}
+
+.tickets-toolbar {
+  gap: clamp(8px, 1.4cqh, 16px);
+  padding: clamp(8px, 1.6cqh, 14px) clamp(12px, 2.6cqw, 18px);
+}
+
+.tickets-toolbar .tkf {
+  padding: clamp(8px, 1.6cqh, 14px) clamp(12px, 2.6cqw, 20px);
+  font-size: clamp(14px, 2.2cqh, 22px);
+}
+
+.tickets-list {
+  padding: clamp(10px, 2cqh, 18px) clamp(10px, 2.6cqw, 18px) clamp(14px, 2.4cqh, 24px);
+  gap: clamp(10px, 2cqh, 18px);
+  grid-auto-rows: max-content;
+}
+
+.tk-row {
+  gap: clamp(10px, 1.8cqh, 18px);
+  padding: clamp(10px, 2.2cqh, 18px);
+  border-radius: clamp(12px, 1.8cqh, 16px);
+}
+
+.tk-main {
+  gap: clamp(6px, 1.4cqh, 10px);
+}
+
+.tk-title {
+  gap: clamp(8px, 1.2cqh, 12px);
+  font-size: clamp(16px, 2.8cqh, 28px);
+}
+
+.tk-sub {
+  font-size: clamp(14px, 2.2cqh, 22px);
+}
+
+.tk-badges {
+  gap: clamp(6px, 1.2cqh, 10px);
+}
+
+.tk-chip {
+  font-size: clamp(12px, 2cqh, 18px);
+  padding: clamp(3px, .6cqh, 6px) clamp(8px, 1.6cqw, 12px);
+  line-height: 1.25;
+}
+
+.tk-timer {
+  font-weight: 800;
+  font-size: clamp(14px, 2.4cqh, 22px);
+}
+
+.tk-actions {
+  gap: clamp(10px, 1.8cqh, 18px);
+}
+
+.tk-btn {
+  border-radius: clamp(10px, 1.6cqh, 14px);
+  padding: clamp(10px, 1.8cqh, 14px) clamp(14px, 2.6cqw, 22px);
+  font-size: clamp(14px, 2.4cqh, 22px);
+}
+
+/* ───────── Footer: izquierda (menú) + centro (botones) ───────── */
+/* No tocar el posicionamiento; solo el layout interno */
+#mainFooter {
+  justify-content: space-between;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Layout interno centrado con grid */
+#mainFooter .footer-multi {
+  display: grid;
+  grid-template-columns: 1fr max-content 1fr;
+  align-items: center;
+  width: 100%;
+  gap: clamp(8px, 1.2vmin, 14px);
+  flex: 1 1 auto;
+}
+
+#mainFooter .footer-left {
+  grid-column: 1;
+}
+
+#mainFooter .footer-center {
+  grid-column: 2;
+  position: static;
+  /* ¡sin absolute! */
+  transform: none;
+  display: flex;
+  justify-content: center;
+  /* centrar SIEMPRE */
+  align-items: center;
+  gap: clamp(8px, 1.2vmin, 14px);
+  flex-wrap: wrap;
+  max-width: unset;
+  pointer-events: auto;
+}
+
+/* Desplegable “Más” */
+.footer-more {
+  position: relative;
+}
+
+.btnMore {
+  width: clamp(120px, calc(var(--footer-h) * 1.6), 260px);
+  height: var(--footer-h);
+  font-size: clamp(12px, calc(var(--footer-h) * 0.22), 22px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .00)),
+    linear-gradient(180deg, #0f1a2e 0%, #0d1730 100%);
+  color: var(--text);
+  border: 1px solid #22324b;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: var(--fz-14);
+  padding: 6px;
+  cursor: pointer;
+}
+
+.moreMenu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  background: #0f1a2e;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2);
+  display: none;
+  min-width: 220px;
+  overflow: hidden;
+  z-index: 1200;
+}
+
+.moreMenu.open {
+  display: block;
+}
+
+.moreMenu button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  cursor: pointer;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.moreMenu button:hover {
+  background: #13233e;
+}
+
+#mainFooter .btnFooter {
+  position: relative;
+}
+
+#mainFooter .footer-multi .live-clock-footer {
+  position: static !important;
+  right: auto;
+  top: auto;
+  transform: none;
+  grid-column: 3;
+  /* ← columna derecha */
+  justify-self: end;
+  /* pegado a la derecha del grid */
+  align-self: center;
+}
+
+/* Menú "Más" — tamaño XL */
+#mainFooter .moreMenu {
+  min-width: clamp(260px, 32vmin, 420px);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .45);
+  padding: 4px;
+  /* un poco de aire interno */
+}
+
+/* Ítems del menú más grandes y cómodos de tocar */
+#mainFooter .moreMenu button {
+  padding: clamp(12px, 2.0vmin, 18px) clamp(16px, 2.6vmin, 24px);
+  font-size: clamp(14px, 2.4vmin, 22px);
+  gap: clamp(10px, 1.6vmin, 16px);
+  border-radius: 10px;
+}
+
+/* Iconito/emoji del ítem más grande y alineado */
+#mainFooter .moreMenu button>span {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  font-size: 1.2em;
+}
+
+/* ───────── Layout de Contadores (Responsive Grid) ───────── */
+#app .horizontal-container {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  gap: 12px;
+  grid-auto-rows: minmax(0, 1fr);
+  align-items: stretch;
+  align-content: stretch;
+}
+
+/* Un telar: ocupa TODO el ancho y alto */
+#app .horizontal-container.mode-one {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+/* 2 telares: Responsive según modo de layout */
+
+/* SOLO CONTADORES (single-column): lado a lado */
+.single-column .horizontal-container.mode-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: 1fr;
+}
+
+/* PANTALLA PARTIDA (two-columns): apilados verticalmente 50/50 */
+.two-columns .horizontal-container.mode-two {
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+/* Ajustes de compactación para modo apilado (two-columns) */
+.two-columns .horizontal-container.mode-two .content-container {
+  gap: 6px;
+  padding: 8px 10px 8px;
+}
+
+.two-columns .horizontal-container.mode-two .title-telar {
+  padding: 6px 8px;
+  font-size: clamp(16px, 2.2cqw, 20px);
+}
+
+.two-columns .horizontal-container.mode-two .mensaje-final {
+  display: none;
+}
+
+.two-columns .horizontal-container.mode-two .display.flex-1 {
+  gap: 8px;
+}
+
+.two-columns .horizontal-container.mode-two .row {
+  padding: clamp(4px, 1.6cqw, 8px) 12px;
+}

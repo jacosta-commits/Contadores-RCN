@@ -1,0 +1,623 @@
+/* ===== supervisor.css (ZENTRIK • responsive + header fijo) ===== */
+
+/* -------------------- Paleta ZENTRIK -------------------- */
+:root {
+    --z-bg: #0D1B2A;
+    /* fondo app */
+    --z-bg-2: #111a2a;
+    /* panel oscuro */
+    --z-card: #0b1321;
+    /* tarjeta */
+    --z-border: #233148;
+    /* bordes */
+    --z-text: #E5EEF7;
+    /* texto base */
+    --z-muted: #99A7B7;
+    /* texto tenue */
+    --z-accent: #1B6CA8;
+    /* azul marca */
+    --z-accent-2: #2C97DE;
+    /* azul claro */
+    --z-success: #00A676;
+    /* verde marca */
+    --z-warn: #FFC107;
+    /* amarillo */
+    --z-danger: #F44336;
+    /* rojo */
+    --z-panel: #121b2a;
+    --shadow-1: 0 6px 16px rgba(0, 0, 0, .35);
+    --radius: 10px;
+    --radius-sm: 8px;
+
+    /* LEDs */
+    --led-yellow: #FFC107;
+    --led-red: #F44336;
+    --led-green: #4CAF50;
+
+    /* Header fijo */
+    --sup-header-h: 160px;
+    /* alto aprox. del bloque h1+buscador+tabs (fallback) */
+}
+
+/* Fuente Digital7 (para los dígitos) */
+@font-face {
+    font-family: 'Digital7';
+    src: url('fonts/digital-7.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* -------------------- Reset / base -------------------- */
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    background-color: var(--z-bg);
+    color: var(--z-text);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    line-height: 1.25;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+/* -------------------- Header fijo (título + filtro + tabs) -------------------- */
+.sup-header {
+    position: fixed;
+    top: var(--portal-offset);
+    /* queda debajo del header del portal */
+    left: 0;
+    right: 0;
+    z-index: 70;
+    background: linear-gradient(180deg, rgba(13, 27, 42, .98), rgba(13, 27, 42, .92));
+    border-bottom: 1px solid var(--z-border);
+    backdrop-filter: blur(4px);
+    padding: 6px 0 4px;
+}
+
+/* El espaciador empuja el contenido para que no quede tapado por el header fijo */
+#supHeader-spacer {
+    height: var(--sup-header-h);
+}
+
+/* Título dentro del header */
+.sup-header h1 {
+    margin: 6px 0 8px;
+    text-align: center;
+    font-size: clamp(16px, 2.4vw, 22px);
+    font-weight: 700;
+    color: var(--z-warn);
+    letter-spacing: .4px;
+}
+
+/* Filtro dentro del header */
+.sup-header .filter-container {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 10px 8px;
+}
+
+.sup-header .filter-container label {
+    display: none;
+}
+
+.sup-header .filter-container input {
+    width: min(900px, 94vw);
+    height: 44px;
+    padding: 10px 12px;
+    font-size: clamp(14px, 2.6vw, 16px);
+    border-radius: 12px;
+    border: 1px solid #2b3f5e;
+    background-color: #0f192a;
+    color: var(--z-text);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    box-shadow: 0 0 0 3px rgba(44, 151, 222, .12);
+}
+
+.sup-header .filter-container input:focus {
+    border-color: var(--z-accent-2);
+    box-shadow: 0 0 0 3px rgba(44, 151, 222, .28);
+}
+
+/* Tabs de grupos dentro del header (scroll horizontal en móvil) */
+.sup-header .group-nav {
+    display: flex;
+    gap: 8px;
+    padding: 6px 10px 10px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.sup-header .group-btn {
+    flex: none;
+    background: #1a2233;
+    color: var(--z-text);
+    border: 1px solid var(--z-border);
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: clamp(12px, 2.4vw, 14px);
+    cursor: pointer;
+    transition: background .2s, border-color .2s, color .2s, transform .05s;
+}
+
+.sup-header .group-btn:hover {
+    background: #202a40;
+}
+
+.sup-header .group-btn:active {
+    transform: translateY(1px);
+}
+
+.sup-header .group-btn.active {
+    background: radial-gradient(100% 100% at 50% 0%, #213654 0%, #1a273d 100%);
+    border-color: var(--z-accent-2);
+    color: #d7ecff;
+}
+
+/* -------------------- Contenedores de grupo -------------------- */
+.group-container {
+    width: 100%;
+    max-width: 1600px;
+    margin: 10px auto 22px;
+    padding: 12px;
+    background: var(--z-panel);
+    border: 1px solid var(--z-border);
+    border-radius: var(--radius);
+    display: none;
+    opacity: 0;
+    transition: opacity .25s ease;
+    box-shadow: var(--shadow-1);
+}
+
+.group-container.active {
+    display: block;
+    opacity: 1;
+}
+
+.group-container h2 {
+    text-align: center;
+    font-size: clamp(14px, 2.2vw, 18px);
+    margin: 2px 0 12px;
+    color: #ffeb3b;
+    font-weight: 700;
+}
+
+/* -------------------- Grid de tarjetas -------------------- */
+.group-cards {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+
+@media (min-width: 420px) {
+    .group-cards {
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    }
+}
+
+@media (min-width: 768px) {
+    .group-cards {
+        gap: 12px;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .group-cards {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+}
+
+/* -------------------- Tarjeta contador -------------------- */
+.main-container,
+.main-container * {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 258px;
+    /* alto cómodo en móvil */
+    background: linear-gradient(180deg, #0b1321 0%, #0a121f 100%);
+    border: 1px solid var(--z-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease, background .3s;
+    will-change: transform;
+}
+
+.main-container:hover {
+    border-color: #335076;
+    box-shadow: 0 0 0 1px #335076 inset;
+}
+
+/* Estado sin sesión */
+.main-container.no-session {
+    border-color: #7a2222;
+    box-shadow: 0 0 0 2px rgba(183, 28, 28, .28) inset;
+}
+
+.main-container.no-session .title-telar {
+    color: #ff8a80;
+}
+
+.main-container.no-session .session-start-value {
+    color: var(--z-danger);
+}
+
+/* Zoom */
+.main-container.enlarged {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1.35);
+    z-index: 1000;
+    width: min(96vw, 560px);
+    max-height: 92vh;
+    background: #0a1220;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .7);
+    overflow: visible !important;
+}
+
+@media (max-width: 480px) {
+    .main-container.enlarged {
+        transform: translate(-50%, -50%) scale(1.12);
+    }
+}
+
+.placeholder {
+    visibility: hidden;
+}
+
+/* Contenido interno */
+.content-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 6px 6px 8px;
+}
+
+/* Título + HPM */
+.title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 6px 0;
+}
+
+.title-telar {
+    margin: 0;
+    font-size: clamp(14px, 2.6vw, 16px);
+    font-weight: 800;
+    color: #ffeb3b;
+    letter-spacing: .2px;
+}
+
+.speed-display {
+    font-size: clamp(10px, 2.1vw, 12px);
+    background: #0f192a;
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: var(--z-success);
+    border: 1px solid #20324b;
+}
+
+/* Cabecera: operario + RESUMEN */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px 6px;
+    font-size: clamp(10px, 2.2vw, 12px);
+    border-bottom: 1px solid var(--z-border);
+    color: var(--z-muted);
+}
+
+.arrow-btn {
+    background: transparent;
+    color: #d8e7f6;
+    border: 1px solid #304963;
+    padding: 4px 8px;
+    font-size: clamp(10px, 2.2vw, 12px);
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background .2s, border-color .2s, transform .05s;
+}
+
+.arrow-btn:hover {
+    background: #152036;
+    border-color: #3c5a7d;
+}
+
+.arrow-btn:active {
+    transform: translateY(1px);
+}
+
+/* Fila "INICIO SESIÓN" */
+.session-start-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 6px 8px;
+    font-size: clamp(11px, 2.4vw, 12px);
+    color: var(--z-muted);
+}
+
+.session-start-label {
+    opacity: .9;
+    letter-spacing: .4px;
+}
+
+.session-start-value {
+    font-weight: 700;
+    color: #8BC34A;
+}
+
+/* Cuerpo de valores */
+.display.flex-1 {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    gap: 6px;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1a2236;
+    border: 1px solid #22324d;
+    border-radius: 10px;
+    padding: 6px 8px;
+}
+
+.row-label {
+    font-size: clamp(10px, 2.2vw, 12px);
+    font-weight: 700;
+    color: #cdd9e6;
+    letter-spacing: .2px;
+}
+
+.row-value {
+    font-family: 'Digital7', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: clamp(22px, 4.2vw, 30px);
+    letter-spacing: 2px;
+    text-align: right;
+}
+
+/* LEDs */
+.led-yellow {
+    color: var(--led-yellow);
+}
+
+.led-red {
+    color: var(--led-red);
+}
+
+.led-green {
+    color: var(--led-green);
+}
+
+/* Coloración dinámica SOLO en “SET” */
+#groupAnchoveteros .row[id^="rowTotal"],
+#groupConsumo .row[id^="rowTotal"],
+#groupRashell .row[id^="rowTotal"],
+#groupMuketsu .row[id^="rowTotal"] {
+    transition: background-color .25s, color .25s;
+}
+
+/* -------------------- Mini-modal / Participantes -------------------- */
+.mini-modal {
+    position: fixed;
+    z-index: 20000;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, .45);
+    padding: 10px;
+    border-radius: 12px;
+    display: none;
+}
+
+.mini-modal:not(.oculto) {
+    display: block;
+}
+
+.mini-modal-content {
+    background: #0f182b;
+    border: 1px solid #2a3d5a;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow-1);
+    max-width: min(92vw, 780px) !important;
+    max-height: min(70vh, 540px);
+    overflow: hidden;
+}
+
+.mini-modal-content>button[id^="btnCloseParticipantes"] {
+    display: none;
+}
+
+.list-participantes {
+    max-height: min(54vh, 420px);
+    overflow: auto;
+    border-radius: 10px;
+    border: 1px solid #22324d;
+}
+
+.list-participantes table {
+    width: max-content;
+    border-collapse: collapse;
+}
+
+.list-participantes th,
+.list-participantes td {
+    white-space: nowrap;
+    padding: 8px 10px;
+    border-bottom: 1px solid #1e2a42;
+    border-right: 1px solid #1e2a42;
+    color: var(--z-text);
+    font-size: clamp(11px, 2.2vw, 13px);
+}
+
+.list-participantes th {
+    position: sticky;
+    top: 0;
+    background: #122039;
+    z-index: 2;
+}
+
+.footer-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.btn-cancel {
+    background-color: #8b9bb0;
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-cancel:hover {
+    filter: brightness(1.05);
+}
+
+/* Contenedor scrolleable compacto (si lo usas aparte) */
+.scroll-table-container {
+    max-height: 8em;
+    overflow: auto;
+}
+
+/* -------------------- Accesibilidad / Motion -------------------- */
+:focus-visible {
+    outline: 2px solid var(--z-accent-2);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* ======= ALERTA NO-SESION (super visible) ======= */
+.main-container {
+    position: relative;
+}
+
+/* necesario para pseudo-elementos */
+
+.main-container.no-session {
+    border-color: #ff1744 !important;
+    background: linear-gradient(180deg, #16121a 0%, #12070b 100%) !important;
+    /* halo + pulso */
+    box-shadow:
+        0 0 0 2px rgba(255, 23, 68, .35) inset,
+        0 0 16px rgba(255, 23, 68, .25);
+    animation: ztr-pulse-red 1.35s ease-in-out infinite;
+}
+
+/* Barra roja vertical a la izquierda */
+.main-container.no-session::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: linear-gradient(180deg, #ff1744 0%, #ff6e6e 100%);
+    box-shadow: 0 0 12px rgba(255, 23, 68, .45);
+}
+
+/* Píldora “SIN INICIO” en la esquina */
+.main-container.no-session::after {
+    content: "SIN INICIO";
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .6px;
+    color: #fff;
+    background: linear-gradient(90deg, #ff1744 0%, #ff6e6e 100%);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 999px;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
+    box-shadow: 0 2px 10px rgba(255, 23, 68, .25);
+}
+
+/* Punto rojo parpadeando al lado del valor de inicio */
+.main-container.no-session .session-start-value {
+    color: #ff5252 !important;
+    font-weight: 800;
+}
+
+.main-container.no-session .session-start-value::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: #ff1744;
+    box-shadow: 0 0 10px rgba(255, 23, 68, .7);
+    animation: ztr-blink 1s steps(2, start) infinite;
+    vertical-align: middle;
+}
+
+/* (Opcional) resalta también el SET cuando no hay sesión */
+.main-container.no-session [id^="rowTotal"] {
+    outline: 2px solid rgba(255, 23, 68, .5);
+    background: #2b1a1d !important;
+}
+
+/* Animaciones */
+@keyframes ztr-pulse-red {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 2px rgba(255, 23, 68, .45) inset,
+            0 0 12px rgba(255, 23, 68, .22);
+    }
+
+    50% {
+        box-shadow:
+            0 0 0 3px rgba(255, 23, 68, .75) inset,
+            0 0 22px rgba(255, 23, 68, .35);
+    }
+}
+
+@keyframes ztr-blink {
+    to {
+        opacity: .25;
+        filter: saturate(.8) brightness(.9);
+    }
+}
+
+/* Respeta preferencia de accesibilidad (reduce motion) */
+@media (prefers-reduced-motion: reduce) {
+    .main-container.no-session {
+        animation: none !important;
+    }
+
+    .main-container.no-session .session-start-value::before {
+        animation: none !important;
+    }
+}

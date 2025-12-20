@@ -1,0 +1,240 @@
+/* web/shared/css/components/counter.css
+   Migrated from Contadores_02/public/operario/css/contadores.css AND injected CSS from contadores.js */
+
+:root {
+  --card-bg: #0e141d;
+  --card-bg2: #0a1018;
+  --row-a: #151c27;
+  --row-b: #1a2230;
+  --hair: rgba(255, 255, 255, .06);
+  --ink: #ecf2ff;
+  --shadow: 0 14px 40px rgba(0, 0, 0, .35), 0 2px 10px rgba(0, 0, 0, .28);
+}
+
+/* Contenedor de tarjetas (grid) */
+.horizontal-container {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: 1fr;
+  align-items: stretch;
+  gap: 14px;
+  padding: 12px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* Single column mode override */
+.single-column .horizontal-container {
+  grid-template-columns: 1fr;
+}
+
+/* Tarjeta principal */
+.main-container {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--card-bg) 0%, var(--card-bg2) 100%);
+  border-radius: 14px;
+  box-shadow: var(--shadow), inset 0 0 0 1px var(--hair);
+  color: var(--ink);
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  container-type: size;
+}
+
+/* Título */
+.title-telar {
+  text-align: center;
+  font-weight: 800;
+  font-size: clamp(16px, 2.2cqh, 26px);
+  letter-spacing: .2px;
+  margin: 0;
+  padding: 10px 8px;
+  background: transparent;
+  border-bottom: 1px solid var(--hair);
+  color: #facc15;
+}
+
+/* Cuerpo */
+.content-container {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 10px 12px;
+  gap: 10px;
+  min-height: 0;
+}
+
+/* Grid de filas */
+.display.flex-1 {
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Fila individual */
+.row {
+  display: grid;
+  grid-template-columns: 1fr minmax(140px, 28cqw);
+  align-items: center;
+  gap: 14px;
+  padding: clamp(8px, 1.2cqw, 16px) 16px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--row-a) 0%, var(--row-b) 100%);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+
+/* Etiqueta */
+.row-label {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: clamp(12px, 1.8cqh, 18px);
+  letter-spacing: .2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+
+/* Valor */
+.row-value {
+  font-family: 'Digital7', monospace;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: clamp(24px, 4.6cqh, 52px);
+  letter-spacing: .06em;
+  color: #fff;
+}
+
+/* Colores de valores */
+.led-yellow {
+  color: #ffc94a;
+}
+
+.led-red {
+  color: #ff6363;
+}
+
+.led-green {
+  color: #38e37b;
+}
+
+.led-white {
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   INJECTED STYLES FROM contadores.js (CRITICAL FOR LAYOUT)
+   ========================================================================== */
+
+/* Tarjetas grandes overrides */
+.main-container .row {
+  display: grid;
+  align-items: center;
+  /* dale un poco más de ancho a la columna del número */
+  grid-template-columns: 1fr minmax(140px, 34cqw);
+  gap: 12px;
+}
+
+/* Cuando el valor es una suma larga, dale más espacio a la 2ª columna */
+.main-container .row.tight {
+  /* en “tight” aún más ancho para el número */
+  grid-template-columns: minmax(0, 0.55fr) minmax(200px, 48cqw);
+  gap: 8px;
+}
+
+.main-container .row.tight .row-label {
+  font-size: clamp(12px, 2.0cqw, 18px);
+}
+
+.main-container .row.tight .row-value {
+  /* subimos el tope y usamos alto/ANCHO del contenedor */
+  font-size: clamp(26px, max(4.6cqh, 4.6cqw), 96px);
+  letter-spacing: .04em;
+  word-spacing: -4px;
+}
+
+.main-container .row-value {
+  /* que escale por alto o ancho (lo mayor) y con tope más alto */
+  font-size: clamp(36px, max(6.0cqh, 6.0cqw), 120px);
+}
+
+.main-container .title-telar {
+  font-size: clamp(20px, 3cqh, 32px);
+  font-weight: 800;
+}
+
+.main-container .row-label {
+  font-size: clamp(14px, 2.4cqh, 20px);
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: #d7d7d7;
+}
+
+/* ——— 1 TELAR: centrar y estrechar la columna de números ——— */
+.single-column .main-container {
+  width: min(100%, 1200px);
+  /* limita ancho máximo */
+  margin-inline: auto;
+  /* centra la tarjeta */
+}
+
+.single-column .row {
+  grid-template-columns: minmax(0, 1fr) minmax(16ch, 36ch);
+}
+
+.single-column .row.tight {
+  grid-template-columns: minmax(0, 1fr) minmax(20ch, 44ch);
+}
+
+/* 2 TELARES (two-columns mode) overrides */
+/* Cuando hay 2 columnas (login abierto), las tarjetas se apilan verticalmente en el panel izquierdo */
+.two-columns .horizontal-container {
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.two-columns .content-container {
+  gap: 6px;
+  padding: 8px 10px 8px;
+}
+
+.two-columns .title-telar {
+  padding: 6px 8px;
+  font-size: clamp(18px, 2.2cqw, 22px);
+}
+
+.two-columns .display.flex-1 {
+  height: 100%;
+  min-height: 0;
+  gap: 8px;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+}
+
+.two-columns .row {
+  padding: clamp(4px, 1.6cqw, 10px) 12px;
+  grid-template-columns: 1fr minmax(112px, 28cqw);
+}
+
+.two-columns .row-label {
+  font-size: clamp(13px, 2.0cqh, 15px);
+}
+
+.two-columns .row-value {
+  font-size: clamp(30px, max(5.4cqh, 5.4cqw), 96px);
+}
+
+.two-columns .row.tight {
+  grid-template-columns: minmax(0, 0.55fr) minmax(180px, 1fr);
+}
+
+.two-columns .row.tight .row-value {
+  font-size: clamp(26px, max(4.8cqh, 4.8cqw), 88px);
+  letter-spacing: .02em;
+  word-spacing: -4px;
+  text-overflow: clip;
+}

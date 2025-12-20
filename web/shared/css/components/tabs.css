@@ -1,0 +1,20 @@
+.tabs {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 8px;
+  margin-bottom: 10px
+}
+
+.tab {
+  border: 1px solid var(--bg-700);
+  background: var(--bg-850);
+  color: var(--fg-100);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tab.is-active {
+  outline: 2px solid var(--brand-500)
+}

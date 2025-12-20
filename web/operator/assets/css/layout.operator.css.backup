@@ -1,0 +1,166 @@
+/* ══════════════════════════════════════════════════════════
+   OPERATOR LAYOUT (WIREFRAME STYLE)
+   Compatible with existing HTML structure
+   ══════════════════════════════════════════════════════════ */
+
+.op-body {
+  background: var(--color-bg-dark, var(--bg-900));
+  color: var(--color-text-primary, var(--fg-100));
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+/* Main content area */
+.op-main {
+  padding: var(--space-lg, 16px);
+  padding-bottom: 120px;
+  /* Space for fixed footer */
+}
+
+/* Home view container */
+.op-home {
+  max-width: var(--container-lg, 1100px);
+  margin: 0 auto;
+}
+
+/* Grid for telares */
+.op-grid {
+  display: grid;
+  gap: var(--space-xl, 24px);
+}
+
+/* Two column grid when two telares exist */
+.op-grid.two {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Single column grid */
+.op-grid.one {
+  grid-template-columns: 1fr;
+  max-width: var(--container-md, 800px);
+  margin: 0 auto;
+}
+
+/* Column container */
+.op-grid .col {
+  min-width: 0;
+  /* Prevents overflow */
+}
+
+/* Counter card styles */
+.counter-card {
+  /* Inherits from .card */
+}
+
+.counter-card .card__title {
+  text-align: center;
+  font-weight: 700;
+  font-size: var(--text-2xl, 1.5rem);
+  letter-spacing: 0.5px;
+  color: var(--color-primary, var(--brand-300));
+}
+
+.counter-card .card__body {
+  padding: var(--space-xl, 24px);
+}
+
+/* Counter block inside card */
+.counter-block {
+  margin-top: var(--space-md, 12px);
+  display: grid;
+  gap: var(--space-md, 12px);
+}
+
+/* Legacy counter-row styles (if used directly without .counter wrapper) */
+.counter-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-md, 12px);
+  background: var(--color-bg-dark, var(--bg-800));
+  border: 2px solid var(--color-border, var(--bg-700));
+  border-radius: var(--radius-lg, 16px);
+  padding: var(--space-lg, 18px) var(--space-lg, 22px);
+  box-shadow: var(--shadow-sm);
+}
+
+.counter-row .label {
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--color-text-secondary, var(--fg-300));
+  font-size: var(--text-base, 1rem);
+  text-transform: uppercase;
+}
+
+.counter-row .value {
+  font-family: 'Digital7', var(--font-mono);
+  font-size: clamp(28px, 3.3vw, 44px);
+  font-weight: 800;
+  line-height: 1;
+  padding: 10px 16px;
+  border-radius: var(--radius-md, 10px);
+  background: linear-gradient(180deg, var(--color-card-bg, var(--bg-850)), var(--color-bg-dark, var(--bg-900)));
+  border: 2px solid var(--color-border, var(--bg-700));
+  min-width: 100px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Value color variants */
+.value--white {
+  color: var(--color-text-primary, var(--fg-50));
+}
+
+.value--primary {
+  color: var(--color-primary, #007BFF);
+  border-color: var(--color-primary, #007BFF);
+}
+
+.value--amber {
+  color: var(--color-warning, var(--accent-amber));
+  border-color: var(--color-warning, var(--accent-amber));
+}
+
+.value--green {
+  color: var(--color-success, var(--accent-green));
+  border-color: var(--color-success, var(--accent-green));
+}
+
+.value--red {
+  color: var(--color-danger, var(--accent-red));
+  border-color: var(--color-danger, var(--accent-red));
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT
+   ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 1180px) {
+  .op-grid.two {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .op-main {
+    padding: var(--space-md, 12px);
+    padding-bottom: 100px;
+  }
+
+  .op-grid {
+    gap: var(--space-lg, 16px);
+  }
+}
+
+@media (max-width: 480px) {
+  .op-main {
+    padding: var(--space-sm, 8px);
+    padding-bottom: 90px;
+  }
+
+  .op-grid {
+    gap: var(--space-md, 12px);
+  }
+}

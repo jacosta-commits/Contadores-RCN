@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, user-scalable=yes" />
+    <title>Panel Supervisor • Contadores</title>
+
+    <!-- Estilos de Supervisor -->
+    <link rel="stylesheet" href="/supervisor/assets/css/supervisor.css" />
+    <link rel="stylesheet" href="/supervisor/assets/css/navigator.css" />
+</head>
+
+<body>
+    <!-- Ícono hamburguesa (overlay) -->
+    <div id="hamburgerMenu" class="hamburger-menu">
+        <span></span><span></span><span></span>
+    </div>
+
+    <!-- Menú lateral -->
+    <div id="sideMenu" class="side-menu">
+        <ul>
+            <li id="menuHpo">Hileras por Turno</li>
+        </ul>
+    </div>
+
+    <!-- Header fijo: título + filtro + tabs -->
+    <div id="supHeader" class="sup-header">
+        <h1>Panel Supervisor de Contadores</h1>
+
+        <!-- Filtro -->
+        <div id="filter-container" class="filter-container">
+            <label for="telarFilter">Filtra contadores (Ej.: 01, 02…):</label>
+            <input type="text" id="telarFilter" placeholder="Ej.: 01,02" />
+        </div>
+
+        <!-- Botones grupo -->
+        <div class="group-nav">
+            <button id="btnAnchoveteros" class="group-btn active" data-group="Anchoveteros">Anchoveteros</button>
+            <button id="btnConsumo" class="group-btn" data-group="Consumo">Consumo</button>
+            <button id="btnRashell" class="group-btn" data-group="Rashell">Rashell</button>
+            <button id="btnMuketsu" class="group-btn" data-group="Muketsu">Muketsu</button>
+        </div>
+    </div>
+
+    <!-- Espaciador que ocupa el alto del header fijo -->
+    <div id="supHeader-spacer" aria-hidden="true"></div>
+
+    <!-- Root para la app JS -->
+    <div id="app">
+        <!-- Contenedor Anchoveteros -->
+        <div class="group-container active" id="groupAnchoveteros">
+            <h2>Anchoveteros</h2>
+            <div class="group-cards" id="anchoveteros-cards"></div>
+        </div>
+
+        <!-- Contenedor Consumo -->
+        <div class="group-container" id="groupConsumo">
+            <h2>Consumo</h2>
+            <div class="group-cards" id="consumo-cards"></div>
+        </div>
+
+        <!-- Contenedor Rashell -->
+        <div class="group-container" id="groupRashell">
+            <h2>Rashell</h2>
+            <div class="group-cards" id="rashell-cards"></div>
+        </div>
+
+        <!-- Contenedor Muketsu -->
+        <div class="group-container" id="groupMuketsu">
+            <h2>Muketsu</h2>
+            <div class="group-cards" id="muketsu-cards"></div>
+        </div>
+    </div>
+
+    <!-- Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <!-- App Entry Point -->
+    <script type="module" src="/supervisor/assets/js/app.js"></script>
+
+    <!-- Ajuste del alto del header fijo (spacer) -->
+    <script>
+        (function () {
+            const hd = document.getElementById('supHeader');
+            const sp = document.getElementById('supHeader-spacer');
+            if (!hd || !sp) return;
+            const setSpacer = () => { sp.style.height = (hd.offsetHeight || 160) + 'px'; };
+            setSpacer();
+            window.addEventListener('load', setSpacer);
+            window.addEventListener('resize', setSpacer);
+        })();
+    </script>
+</body>
+
+</html>

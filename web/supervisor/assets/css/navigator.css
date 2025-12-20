@@ -1,0 +1,166 @@
+/* ===== navigator.css (ZENTRIK) ===== */
+:root {
+    --z-bg: #0D1B2A;
+    --z-border: #233148;
+    --z-text: #E5EEF7;
+    --z-accent: #1B6CA8;
+    --z-panel: #111a2a;
+}
+
+/* Menú hamburger */
+.hamburger-menu {
+    position: fixed;
+    top: 12px;
+    left: 10px;
+    width: 34px;
+    height: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    z-index: 999999;
+    padding: 6px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .08);
+    border: 1px solid rgba(255, 255, 255, .06);
+    transition: transform .2s ease, background .2s;
+}
+
+.hamburger-menu:hover {
+    background: rgba(255, 255, 255, .06);
+}
+
+.hamburger-menu span {
+    display: block;
+    height: 3px;
+    border-radius: 2px;
+    background: #fff;
+    margin: 2px 0;
+    transition: all .25s ease;
+}
+
+.hamburger-menu.active span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.hamburger-menu.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-menu.active span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+/* Drawer lateral */
+.side-menu {
+    position: fixed;
+    top: 0;
+    left: -320px;
+    width: 260px;
+    max-width: 86vw;
+    height: 100%;
+    background: linear-gradient(180deg, #111a2a, #0e1727);
+    border-right: 1px solid var(--z-border);
+    padding: 18px 14px;
+    transition: left .28s ease;
+    z-index: 10000;
+    pointer-events: none;
+    box-shadow: 6px 0 24px rgba(0, 0, 0, .35);
+}
+
+.side-menu.active {
+    left: 0;
+    pointer-events: auto;
+}
+
+.side-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.side-menu ul li {
+    padding: 12px 10px;
+    margin: 2px 0;
+    text-align: center;
+    font-size: 15px;
+    color: var(--z-text);
+    border: 1px solid var(--z-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background .2s, border-color .2s, transform .05s;
+}
+
+.side-menu ul li:hover {
+    background: #15233a;
+    border-color: #305079;
+}
+
+.side-menu ul li:active {
+    transform: translateY(1px);
+}
+
+/* Modal genérico (historyModal.js) */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, .55);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 15000;
+}
+
+.modal-content {
+    background-color: #0f182b;
+    padding: 20px;
+    border-radius: 12px;
+    max-width: 92%;
+    max-height: 80%;
+    overflow: auto;
+    border: 1px solid var(--z-border);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+}
+
+.modal-content h2 {
+    color: #ffeb3b;
+    margin: 0 0 10px;
+}
+
+/* Mini-modal (coincide con supervisor.css) */
+.mini-modal {
+    position: fixed;
+    z-index: 20000;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, .45);
+    padding: 10px;
+    border-radius: 12px;
+    display: none;
+}
+
+.mini-modal:not(.oculto) {
+    display: block;
+}
+
+.mini-modal-content {
+    background-color: #0f182b;
+    max-width: 420px;
+    max-height: 420px;
+    overflow-y: auto;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, .5);
+    border: 1px solid var(--z-border);
+}
+
+.btn-cancel {
+    margin-top: 10px;
+    background-color: #8b9bb0;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+}

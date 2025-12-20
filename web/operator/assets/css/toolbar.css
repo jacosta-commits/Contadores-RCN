@@ -1,0 +1,74 @@
+/* web/operator/assets/css/toolbar.css
+   Migrated from Contadores_02/public/operario/css/main.css (Header section) */
+
+#mainHeader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(14px, 2.2vw, 22px);
+  z-index: 1000;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, var(--surface-2) 0%, #0f1628 100%);
+  border-bottom: 1px solid #2b374a;
+  box-shadow: var(--shadow-1);
+  color: var(--text);
+  font-size: var(--fz-16);
+}
+
+#mainHeader .header-info {
+  display: flex;
+  gap: clamp(14px, 2.4vw, 28px);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#mainHeader .header-info .info-pair {
+  display: flex;
+  align-items: baseline;
+  gap: .35rem;
+  white-space: nowrap;
+}
+
+#mainHeader .header-info strong {
+  color: #facc15;
+  font-weight: 900;
+  letter-spacing: .2px;
+  margin: 0;
+}
+
+#mainHeader .header-info span {
+  color: var(--text);
+  margin: 0;
+}
+
+/* Botón del header */
+.btn-header {
+  background: linear-gradient(180deg, #7cc0ff 0%, var(--accent) 100%);
+  color: #061a2a;
+  border: 1px solid transparent;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: var(--fz-16);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 18px rgba(96, 165, 250, .22);
+  transition: filter .15s ease, transform .06s ease;
+}
+
+.btn-header:hover {
+  filter: brightness(1.05);
+}
+
+.btn-header:active {
+  transform: translateY(1px);
+}

@@ -1,0 +1,786 @@
+/* ============================================================================
+   ZENTRIK • Operario
+   login-checklist.css
+   - Estilo moderno, accesible y responsive para Login + Checklists
+   - Centrado dentro de su “mitad de pantalla”
+   - Scroll SOLO si el contenido no cabe (card/tabla)
+   ============================================================================ */
+
+/* ───────────────────────────────── Design Tokens ─────────────────────────── */
+:root {
+    /* Paleta ZENTRIK */
+    --bg: #0b1220;
+    --bg-2: #0d1b2a;
+    --surface: #101a2d;
+    --surface-2: #131f36;
+    --text: #e6edf7;
+    --muted: #94a3b8;
+    --border: #22324b;
+
+    /* Acentos */
+    --accent: #60a5fa;
+    /* azul brillante */
+    --accent-2: #00a676;
+    /* verde ZENTRIK */
+
+    /* Estados */
+    --ok: #22c55e;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+
+    /* Radius, sombras, tipografía */
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow-1: 0 10px 30px rgba(0, 0, 0, .35), 0 4px 10px rgba(0, 0, 0, .30);
+    --shadow-2: 0 18px 40px rgba(0, 0, 0, .45), 0 6px 16px rgba(0, 0, 0, .35);
+
+    /* Tamaños */
+    --space-1: 6px;
+    --space-2: 10px;
+    --space-3: 14px;
+    --space-4: 18px;
+    --space-5: 24px;
+    --space-6: 32px;
+
+    --fz-12: clamp(11px, 1.2vw, 12px);
+    --fz-14: clamp(12px, 1.4vw, 14px);
+    --fz-16: clamp(14px, 1.6vw, 16px);
+    --fz-18: clamp(15px, 1.8vw, 18px);
+    --fz-20: clamp(16px, 2.0vw, 20px);
+    --fz-24: clamp(18px, 2.4vw, 24px);
+    --fz-28: clamp(20px, 2.8vw, 28px);
+}
+
+/* ───────────────────────────── Reset básico (scopeado) ──────────────────── */
+.panel,
+.panel * {
+    box-sizing: border-box;
+}
+
+/* ───────────────────────────── Panel base (slot mitad) ──────────────────── */
+.panel {
+    width: 100%;
+    height: 100%;
+    /* ocupa exactamente el alto del slot asignado */
+    min-height: 0;
+    /* permite que los hijos gestionen el scroll si hace falta */
+    padding: clamp(12px, 2vw, 24px);
+
+    display: grid;
+    place-items: center;
+    /* centra su contenido */
+
+    overflow: hidden;
+    /* el panel no scrollea; lo hacen sus hijos si desbordan */
+    background:
+        radial-gradient(1000px 600px at 110% -10%, rgba(96, 165, 250, .12), transparent 60%),
+        radial-gradient(800px 500px at -10% 110%, rgba(0, 166, 118, .12), transparent 60%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+    animation: panelIn .28s ease-out;
+}
+
+@keyframes panelIn {
+    from {
+        opacity: .0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ========================================================================== */
+/*                                 LOGIN                                      */
+/* ========================================================================== */
+
+.panel-login {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+
+    /* Antes: place-items: stretch; */
+    display: grid;
+    place-items: center;
+    /* centra el contenido en su mitad */
+    align-content: center;
+    /* por si sobra altura */
+    justify-content: center;
+}
+
+/* Tarjeta de login: centrada; scrollea SOLO si crece mucho */
+.login-card {
+    width: min(520px, 100%);
+    /* antes: 100% → evita que quede demasiado ancha */
+    height: auto;
+    /* antes: 100% → ya no se estira a todo el alto */
+    max-height: 100%;
+    /* puede crecer hasta llenar su mitad si el contenido lo requiere */
+    overflow: auto;
+    /* scroll interno si se pasa */
+
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, .00)),
+        linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-2);
+    padding: clamp(16px, 2.4vw, 28px);
+    display: grid;
+    gap: var(--space-4);
+}
+
+/* Título */
+.login-card h2 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--fz-28);
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: var(--text);
+    text-align: center;
+}
+
+/* Campo + etiqueta */
+.login-field {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.login-field label {
+    font-size: var(--fz-14);
+    color: var(--muted);
+    font-weight: 600;
+}
+
+/* Input + botón lado a lado */
+.login-input-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-2);
+}
+
+/* Input */
+.login-input-row input {
+    height: 48px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #0f1a2e;
+    color: var(--text);
+    padding: 0 14px;
+    font-size: var(--fz-18);
+    outline: none;
+    transition: box-shadow .15s ease, border-color .15s ease, transform .06s ease;
+}
+
+.login-input-row input::placeholder {
+    color: #8ea1be;
+    opacity: .75;
+}
+
+.login-input-row input:focus {
+    border-color: rgba(96, 165, 250, .55);
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, .18);
+}
+
+/* Botón primario */
+.login-input-row button,
+#btnIniciar {
+    height: 48px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-size: var(--fz-16);
+    font-weight: 700;
+    color: #071625;
+    background: linear-gradient(180deg, #7cc0ff 0%, #60a5fa 100%);
+    cursor: pointer;
+    transition: transform .06s ease, filter .15s ease, box-shadow .15s ease;
+    box-shadow: 0 6px 18px rgba(96, 165, 250, .25);
+}
+
+.login-input-row button:hover,
+#btnIniciar:hover {
+    filter: brightness(1.05);
+}
+
+.login-input-row button:active,
+#btnIniciar:active {
+    transform: translateY(1px);
+}
+
+#btnIniciar:disabled {
+    cursor: not-allowed;
+    filter: grayscale(.35) brightness(.85);
+    opacity: .7;
+}
+
+/* Mensaje de validación */
+.mensaje {
+    min-height: 22px;
+    text-align: center;
+    font-size: var(--fz-14);
+    color: var(--muted);
+}
+
+.mensaje.is-error {
+    color: var(--danger);
+}
+
+.mensaje.is-ok {
+    color: var(--ok);
+}
+
+/* Selección de turno */
+.turno-container {
+    margin-top: var(--space-3);
+    display: grid;
+    gap: var(--space-3);
+    justify-items: center;
+}
+
+.turno-container p {
+    margin: 0;
+    font-size: var(--fz-16);
+    color: var(--text);
+    opacity: .85;
+}
+
+/* Chips de turno */
+.turno-buttons {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(54px, 1fr));
+    gap: var(--space-2);
+    width: 100%;
+}
+
+.turno-buttons .btnTurno,
+.turno-buttons button {
+    height: 46px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--text);
+    background: #0e1830;
+    font-size: var(--fz-16);
+    font-weight: 700;
+    letter-spacing: .4px;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .06s ease, background .2s ease;
+}
+
+.turno-buttons .btnTurno:hover,
+.turno-buttons button:hover {
+    border-color: rgba(96, 165, 250, .5);
+    box-shadow: 0 8px 20px rgba(96, 165, 250, .15);
+}
+
+.turno-buttons .btnTurno:active,
+.turno-buttons button:active {
+    transform: translateY(1px);
+}
+
+.turno-buttons .selected {
+    color: #04141f;
+    background: linear-gradient(180deg, #ffe27a 0%, #ffeb3b 100%);
+    border-color: #d9c13a;
+    box-shadow: 0 8px 22px rgba(255, 235, 59, .18);
+}
+
+/* Botón “Iniciar sesión” */
+#btnIniciar {
+    width: min(320px, 100%);
+    justify-self: center;
+}
+
+/* ========================================================================== */
+/*                               CHECKLISTS                                   */
+/* ========================================================================== */
+
+.panel-checklists {
+    display: grid;
+    grid-template-rows: max-content minmax(0, 1fr) max-content;
+    /* título | TABLA | botón */
+    place-items: stretch;
+    /* anula el centrado del .panel base */
+    align-items: stretch;
+    justify-items: stretch;
+
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    gap: var(--space-3);
+    padding: clamp(12px, 2vw, 20px);
+    overflow: hidden;
+    /* el scroll vive en .table-checklists */
+    position: relative;
+}
+
+/* Los hijos del grid deben poder encogerse */
+.panel-checklists>* {
+    min-width: 0;
+    min-height: 0;
+}
+
+#checklistTitle {
+    margin: 0;
+    font-size: var(--fz-24);
+    color: var(--text);
+    text-align: center;
+    letter-spacing: .3px;
+}
+
+/* Contenedor tabla */
+.table-checklists {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow-x: hidden;
+    /* no horizontal */
+    overflow-y: auto;
+    /* sí vertical dentro de la tabla */
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, .00)),
+        linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+    box-shadow: var(--shadow-1);
+}
+
+/* Filas y celdas */
+.table-checklists .row {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1.2fr)
+        /* Pregunta */
+        repeat(var(--telar-cols, 2), minmax(0, 1fr));
+    /* Telar(es) */
+    gap: var(--space-2);
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, .04);
+    padding: var(--space-3) var(--space-4);
+}
+
+.table-checklists .header-row {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: linear-gradient(180deg, #152440 0%, #102035 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    color: var(--text);
+    font-weight: 700;
+}
+
+.table-checklists .cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    text-align: center;
+    color: var(--text);
+    font-size: var(--fz-16);
+}
+
+.table-checklists .cell-pregunta {
+    justify-content: flex-start;
+    text-align: left;
+    color: #d9e3f0;
+}
+
+/* Resalta “TELAR 04 / 10” (segunda y tercera columna) */
+.table-checklists .header-row .cell:nth-child(n+2) {
+    color: #ffeb3b;
+    font-weight: 800;
+    font-size: var(--fz-20);
+}
+
+/* Celda de telar: evita que los botones se monten */
+.table-checklists .cell-telar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(56px, 1fr));
+    gap: 8px;
+}
+
+.table-checklists .cell-telar .btnSi,
+.table-checklists .cell-telar .btnNo {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    /* ↓ más bajo */
+    padding: 0 10px;
+    /* ↓ menos padding */
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: var(--fz-16);
+    font-weight: 700;
+    color: var(--text);
+    background: #0f1a2e;
+    cursor: pointer;
+    transition: box-shadow .15s ease, border-color .15s ease, transform .06s ease, background .2s ease;
+}
+
+/* Botones Sí/No como toggles */
+.btnSi,
+.btnNo {
+    height: 42px;
+    min-width: 96px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: var(--fz-16);
+    font-weight: 700;
+    color: var(--text);
+    background: #0f1a2e;
+    cursor: pointer;
+    transition: box-shadow .15s ease, border-color .15s ease, transform .06s ease, background .2s ease;
+}
+
+.btnSi:hover,
+.btnNo:hover {
+    border-color: rgba(96, 165, 250, .45);
+    box-shadow: 0 8px 20px rgba(96, 165, 250, .12);
+}
+
+.btnSi:active,
+.btnNo:active {
+    transform: translateY(1px);
+}
+
+.btnSi.selected {
+    background: linear-gradient(180deg, #35e079 0%, #22c55e 100%) !important;
+    color: #052012 !important;
+    border-color: #22c55e !important;
+    box-shadow: 0 10px 24px rgba(34, 197, 94, .22);
+}
+
+.btnNo.selected {
+    background: linear-gradient(180deg, #ff7b7b 0%, #ef4444 100%) !important;
+    color: #2a0707 !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 10px 24px rgba(239, 68, 68, .22);
+}
+
+/* Fila del botón Guardar (al pie del panel) */
+.guardar-row {
+    display: grid;
+    align-items: stretch;
+}
+
+#btnGuardarAll {
+    height: 52px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-size: var(--fz-18);
+    font-weight: 800;
+    color: #061a2a;
+    background: linear-gradient(180deg, #7cc0ff 0%, #60a5fa 100%);
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(96, 165, 250, .25);
+    transition: transform .06s ease, filter .15s ease;
+}
+
+#btnGuardarAll:hover {
+    filter: brightness(1.05);
+}
+
+#btnGuardarAll:active {
+    transform: translateY(1px);
+}
+
+#btnGuardarAll:disabled {
+    cursor: not-allowed;
+    filter: grayscale(.3) brightness(.9);
+    opacity: .7;
+}
+
+/* ¡Clave! Permite contraer y quebrar texto */
+.table-checklists,
+.table-checklists * {
+    min-width: 0;
+}
+
+.table-checklists .cell-pregunta {
+    justify-content: flex-start;
+    text-align: left;
+    color: #d9e3f0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* Modo ajuste: escala la tabla para caber en el alto/ancho disponible */
+.table-checklists.fit-enabled {
+    transform-origin: top left;
+    transform: scale(var(--fit-scale, 1));
+    width: calc(100% / var(--fit-scale, 1));
+    /* corrige el ancho tras escalar */
+    height: auto;
+}
+
+/* ========================================================================== */
+/*                              Accesibilidad                                 */
+/* ========================================================================== */
+
+.panel :focus-visible {
+    outline: 3px solid rgba(96, 165, 250, .5);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+/* Reduce motion si el usuario lo pide */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* ========================================================================== */
+/*                              Responsive                                     */
+/* ========================================================================== */
+
+@media (max-width: 920px) {
+    .table-checklists .row {
+        grid-template-columns:
+            minmax(220px, 1.1fr) repeat(var(--telar-cols, 2), minmax(150px, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .table-checklists .row {
+        grid-template-columns: 1fr;
+    }
+
+    .table-checklists .cell {
+        justify-content: flex-start;
+    }
+}
+
+/* ========================================================================== */
+/*                          Scrollbar (estética)                               */
+/* ========================================================================== */
+
+.table-checklists::-webkit-scrollbar,
+.login-card::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.table-checklists::-webkit-scrollbar-thumb,
+.login-card::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #44608a, #31496d);
+    border-radius: 20px;
+    border: 2px solid rgba(0, 0, 0, .25);
+}
+
+.table-checklists::-webkit-scrollbar-track,
+.login-card::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, .05);
+    border-radius: 20px;
+}
+
+/* ============================================================================
+   MODALES ZENTRIK (reutilizables)
+   ============================================================================ */
+
+.z-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(7, 12, 22, 0.60);
+    /* backdrop oscuro */
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 6000;
+}
+
+.z-modal {
+    width: min(520px, calc(100vw - 32px));
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, 0)),
+        linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-2);
+    padding: var(--space-5);
+    display: grid;
+    gap: var(--space-4);
+    animation: zModalIn .18s ease-out;
+}
+
+@keyframes zModalIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.z-modal__msg {
+    color: var(--text);
+    font-size: var(--fz-18);
+    line-height: 1.35;
+    text-align: center;
+    margin: 0;
+}
+
+.z-modal__actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: center;
+    margin-top: var(--space-2);
+}
+
+/* Botonera consistente con el tema */
+.z-btn {
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-weight: 800;
+    font-size: var(--fz-16);
+    letter-spacing: .3px;
+    cursor: pointer;
+    transition: filter .12s ease, transform .06s ease, box-shadow .12s ease;
+}
+
+.z-btn:active {
+    transform: translateY(1px);
+}
+
+.z-btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.z-btn--ok {
+    background: linear-gradient(180deg, #35e079 0%, var(--ok) 100%);
+    color: #052012;
+    border-color: #22c55e;
+    box-shadow: 0 8px 20px rgba(34, 197, 94, .18);
+}
+
+.z-btn--ok:hover {
+    filter: brightness(1.03);
+}
+
+.z-btn--danger {
+    background: linear-gradient(180deg, #ff7b7b 0%, var(--danger) 100%);
+    color: #2a0707;
+    border-color: #ef4444;
+    box-shadow: 0 8px 20px rgba(239, 68, 68, .18);
+}
+
+.z-btn--danger:hover {
+    filter: brightness(1.03);
+}
+
+/* foco accesible igual que el resto del sistema */
+.z-modal :focus-visible {
+    outline: 3px solid rgba(96, 165, 250, .5);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+/* ── MODO DENSO (auto cuando no cabe) ───────────────────────────── */
+.table-checklists.dense .row {
+    padding: var(--space-2) var(--space-3);
+    gap: 8px;
+}
+
+.table-checklists.dense .cell {
+    font-size: var(--fz-14);
+}
+
+.table-checklists.dense .cell-telar {
+    gap: 6px;
+    grid-template-columns: repeat(2, minmax(52px, 1fr));
+}
+
+.table-checklists.dense .cell-telar .btnSi,
+.table-checklists.dense .cell-telar .btnNo {
+    height: 34px;
+    /* aún más compacto */
+    padding: 0 8px;
+    font-size: var(--fz-14);
+    border-radius: 8px;
+}
+
+#checklistTitle {
+    transition: font-size .12s ease;
+}
+
+.panel-checklists .table-checklists.dense~.guardar-row #btnGuardarAll {
+    height: 48px;
+    font-size: var(--fz-16);
+}
+
+/* ====== MODO REVISIÓN (solo lectura) ====== */
+.review-header {
+    display: grid;
+    grid-template-columns: 42px 1fr 42px;
+    align-items: center;
+    gap: 8px;
+    margin-top: -4px;
+    /* opcional, ajusta al gusto */
+    margin-bottom: 4px;
+}
+
+.btn-close-review {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #0f1a2e;
+    color: #e6edf7;
+    cursor: pointer;
+    box-shadow: var(--shadow-1);
+}
+
+.btn-close-review:hover {
+    filter: brightness(1.05);
+}
+
+.panel-checklists.review-mode .btnSi,
+.panel-checklists.review-mode .btnNo {
+    pointer-events: none;
+    opacity: .65;
+}
+
+.panel-checklists.review-mode .guardar-row {
+    display: none;
+    /* oculta el botón Guardar en revisión */
+}
+
+/* Botón cerrar revisión (X) flotante */
+.review-close-btn {
+    position: absolute;
+    top: clamp(6px, 1.2vw, 10px);
+    right: clamp(6px, 1.2vw, 10px);
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #0f1a2e;
+    color: var(--text);
+    font-weight: 800;
+    cursor: pointer;
+    z-index: 15;
+    /* por encima del header sticky de la tabla */
+    box-shadow: var(--shadow-1);
+    transition: filter .12s ease, transform .06s ease;
+}
+
+.review-close-btn:hover {
+    filter: brightness(1.06);
+}
+
+.review-close-btn:active {
+    transform: translateY(1px);
+}

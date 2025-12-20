@@ -1,0 +1,130 @@
+/* web/operator/assets/css/footerbar.css
+   Migrated from Contadores_02/public/operario/css/main.css (Footer section) */
+
+#mainFooter {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--footer-h);
+    padding: 0 clamp(12px, 2vw, 20px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px));
+    z-index: 1000;
+
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, 0)),
+        linear-gradient(180deg, #0f1628 0%, var(--surface-2) 100%);
+    border-top: 1px solid #243049;
+    box-shadow: var(--shadow-1);
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Layout interno grid */
+.footer-multi {
+    display: grid;
+    grid-template-columns: 1fr max-content 1fr;
+    align-items: center;
+    width: 100%;
+    gap: clamp(8px, 1.2vmin, 14px);
+    flex: 1 1 auto;
+}
+
+.footer-left {
+    grid-column: 1;
+}
+
+.footer-center {
+    grid-column: 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(8px, 1.2vmin, 14px);
+    flex-wrap: wrap;
+}
+
+.footer-right {
+    grid-column: 3;
+    justify-self: end;
+    align-self: center;
+}
+
+/* Botones HMI */
+.btnFooter {
+    width: clamp(120px, calc(var(--footer-h) * 1.6), 260px);
+    height: var(--footer-h);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .00)),
+        linear-gradient(180deg, #0f1a2e 0%, #0d1730 100%);
+    color: var(--text);
+    border: 1px solid #22324b;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: clamp(12px, calc(var(--footer-h) * 0.22), 22px);
+    text-align: center;
+    padding: 6px;
+    cursor: pointer;
+    transition: transform .06s ease, box-shadow .15s ease, border-color .15s ease;
+    position: relative;
+}
+
+.btnFooter:hover {
+    border-color: rgba(96, 165, 250, .4);
+    box-shadow: 0 12px 26px rgba(96, 165, 250, .18);
+}
+
+.btnFooter:active {
+    transform: translateY(1px);
+}
+
+.icon-emoji {
+    font-size: 1.4em;
+    line-height: 1;
+}
+
+/* Reloj en vivo */
+.live-clock-footer {
+    font-size: clamp(16px, calc(var(--footer-h) * 0.36), 32px);
+    color: var(--ok);
+    font-weight: 700;
+    letter-spacing: .3px;
+    user-select: none;
+    pointer-events: none;
+    text-shadow: 0 0 8px rgba(0, 166, 118, .25);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .btnFooter {
+        width: 88px;
+    }
+}
+
+/* Badge de pendientes */
+#badge-pend {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, .25);
+}
+
+.is-hidden {
+    display: none !important;
+}

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Operario · Contadores</title>
+  <meta name="description" content="Panel de operario para gestión de contadores y alertas de telares." />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Shared design tokens + base + components -->
+  <link rel="stylesheet" href="/shared/css/tokens.css" />
+  <link rel="stylesheet" href="/shared/css/base.css" />
+  <link rel="stylesheet" href="/shared/css/components/counter.css" />
+  <link rel="stylesheet" href="/shared/css/components/login-checklist.css" />
+  <link rel="stylesheet" href="/shared/css/components/card.css" />
+  <link rel="stylesheet" href="/shared/css/components/modal.css" />
+  <link rel="stylesheet" href="/shared/css/components/tabs.css" />
+  <link rel="stylesheet" href="/shared/css/components/chips.css" />
+  <link rel="stylesheet" href="/shared/css/components/call-modal.css" />
+
+  <!-- Operator-only CSS (Main Layout from Contadores_02) -->
+  <link rel="stylesheet" href="/operator/assets/css/main.css" />
+  <link rel="stylesheet" href="/operator/assets/css/tickets.css" />
+</head>
+
+<body class="op-body">
+
+  <!-- ╭──────── HEADER fijo ────────╮ -->
+  <header id="mainHeader" class="oculto">
+    <div class="header-info">
+      <div class="info-pair"><strong>Código:</strong><span id="lblCodigoOperario"></span></div>
+      <div class="info-pair"><strong>Nombre:</strong><span id="lblNombreOperario"></span></div>
+      <div class="info-pair"><strong>Turno:</strong><span id="lblTurnoOperario"></span></div>
+      <div class="info-pair"><strong>Hora:</strong><span id="lblHoraInicio"></span></div>
+    </div>
+    <button id="btnEmpezarTurno" class="btn-header" disabled>🔑 Iniciar Turno</button>
+  </header>
+  <!-- ╰─────────────────────────────╯ -->
+
+  <!-- Main content -->
+  <main id="app" class="single-column oculto">
+    <!-- Panel principal (Contadores + mosaico de telares) -->
+    <section id="contadoresPanel" class="panel-contadores"></section>
+    <!-- Panel secundario (formularios de turno, etc.) -->
+    <section id="turnoPanel" class="panel-turno hidden"></section>
+  </main>
+
+  <!-- ╭──────── Drawer Tickets ────────╮ -->
+  <div id="ticketsOverlay" class="tickets-overlay hidden" aria-hidden="true"></div>
+  <aside id="ticketsDrawer" class="tickets-drawer" aria-hidden="true">
+    <header class="tickets-header">
+      <h3>Pendientes <small id="ticketsCount">(0)</small></h3>
+      <button id="ticketsClose" class="tickets-close" aria-label="Cerrar">✖</button>
+    </header>
+
+    <div class="tickets-toolbar">
+      <button data-filter="all" class="tkf active">Todos</button>
+      <button data-filter="encarretadora" class="tkf">Encarretadora</button>
+      <button data-filter="mecanico" class="tkf">Mecánico</button>
+      <button data-filter="supervisor" class="tkf">Supervisor</button>
+    </div>
+
+    <div id="ticketsList" class="tickets-list"></div>
+  </aside>
+  <!-- ╰───────────────────────────────╯ -->
+
+  <!-- ╭──────── FOOTER ────────╮ -->
+  <footer id="mainFooter" class="oculto">
+    <!-- El botón “Pendientes” + badge lo inyecta contadores.js -->
+    <span id="liveClockFooter" class="live-clock-footer">--:-- --</span>
+  </footer>
+  <!-- ╰────────────────────────╯ -->
+
+  <!-- Modal root -->
+  <div id="modal-root"></div>
+
+  <!-- Socket.IO -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- App -->
+  <script type="module" src="/operator/assets/js/app.js"></script>
+</body>
+
+</html>
