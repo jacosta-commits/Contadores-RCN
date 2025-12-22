@@ -28,6 +28,29 @@ async function asignar({ sescod, telcod }) {
       tracod: cacheState?.tracod ?? null
     });
 
+    // 3b. CRÍTICO: Actualizar RCN_CONT_CACHE con la nueva sesión
+    // para que el poller (y Supervisor) vean quién está trabajando.
+    // Necesitamos obtener los datos de la sesión primero.
+    const sesionDAL = require('../dal/sesiones.dal');
+    const sesionInfo = await sesionDAL.getById(sescod);
+
+    if (sesionInfo) {
+      await cacheDAL.upsert({
+        telcod,
+        sescod,
+        tracod: sesionInfo.tracod,
+        traraz: sesionInfo.traraz,
+        turno_cod: sesionInfo.turno_cod,
+        session_active: 1,
+        // Preservar contadores actuales
+        hil_act: cacheState?.hil_act ?? 0,
+        hil_turno: cacheState?.hil_turno ?? 0,
+        hil_start: cacheState?.hil_start ?? 0,
+        set_value: cacheState?.set_value ?? 0,
+        velocidad: cacheState?.velocidad ?? 0
+      });
+    }
+
     // 4. Emitir actualización por WebSocket para que Supervisor lo vea inmediatamente
     try {
       const { bus } = require('../sockets');
@@ -39,9 +62,9 @@ async function asignar({ sescod, telcod }) {
         hil_turno: cacheState?.hil_turno ?? 0,
         hil_start: cacheState?.hil_start ?? 0,
         set_value: cacheState?.set_value ?? 0,
-        tracod: cacheState?.tracod ?? null,
-        traraz: null,
-        turno_cod: null,
+        tracod: sesionInfo?.tracod ?? null,
+        traraz: sesionInfo?.traraz ?? null,
+        turno_cod: sesionInfo?.turno_cod ?? null,
         velocidad: 0
       });
     } catch (e) {

@@ -6,41 +6,67 @@ const logger = require('../lib/logger');
 /** Upsert a CACHE vía SP y devuelve snapshot de ese telar desde la vista */
 async function upsert({
   telcod,
-  sescod = null,
-  tracod = null,
-  traraz = null,
-  turno_cod = null,
-  session_active = 0,
+  sescod,        // undefined by default
+  tracod,        // undefined by default
+  traraz,        // undefined by default
+  turno_cod,     // undefined by default
+  session_active,// undefined by default
   hil_act = 0,
   hil_turno = 0,
-  hil_start = null,  // ← Ahora acepta null para NO sobrescribir
-  set_value,         // ← SIN default para permitir undefined
+  hil_start = null,
+  set_value,
   velocidad = 0,
 }) {
-  // Si hil_start es null/undefined, leer el valor actual del cache para NO sobrescribirlo
+  // Valores finales (si vienen undefined, se leerán de la DB)
+  let finalSescod = sescod;
+  let finalTracod = tracod;
+  let finalTraraz = traraz;
+  let finalTurnoCod = turno_cod;
+  let finalSessionActive = session_active;
   let finalHilStart = hil_start;
   let finalSetValue = set_value;
 
   if (telcod === '0069') {
-    logger.info({ telcod, hil_start, set_value }, '[cache.dal] Incoming upsert');
+    logger.info({ telcod, hil_start, set_value, session_active }, '[cache.dal] Incoming upsert');
   }
 
-  // Optimización: Si falta alguno, leemos DB una sola vez
-  if ((finalHilStart === null || finalHilStart === undefined) || (finalSetValue === null || finalSetValue === undefined)) {
+  // Verificar si necesitamos leer de la DB (si falta algún campo crítico o de sesión)
+  const missingSession = (
+    finalSescod === undefined ||
+    finalTracod === undefined ||
+    finalTraraz === undefined ||
+    finalTurnoCod === undefined ||
+    finalSessionActive === undefined
+  );
+
+  const missingCounter = (
+    finalHilStart === null || finalHilStart === undefined ||
+    finalSetValue === null || finalSetValue === undefined
+  );
+
+  if (missingSession || missingCounter) {
     const current = await query(`
-      SELECT hil_start, set_value FROM dbo.RCN_CONT_CACHE WHERE telcod = @telcod
+      SELECT sescod, tracod, traraz, turno_cod, session_active, hil_start, set_value 
+      FROM dbo.RCN_CONT_CACHE 
+      WHERE telcod = @telcod
     `, r => r.input('telcod', sql.VarChar(10), telcod));
 
     const fetched = current.recordset[0] || {};
 
+    if (finalSescod === undefined) finalSescod = fetched.sescod ?? null;
+    if (finalTracod === undefined) finalTracod = fetched.tracod ?? null;
+    if (finalTraraz === undefined) finalTraraz = fetched.traraz ?? null;
+    if (finalTurnoCod === undefined) finalTurnoCod = fetched.turno_cod ?? null;
+    if (finalSessionActive === undefined) finalSessionActive = fetched.session_active ?? 0;
+
     if (finalHilStart === null || finalHilStart === undefined) {
       finalHilStart = fetched.hil_start ?? 0;
-      logger.debug({ telcod, incoming: hil_start, final: finalHilStart }, '[cache.dal] Preserving hil_start');
+      // logger.debug({ telcod, final: finalHilStart }, '[cache.dal] Preserving hil_start');
     }
 
     if (finalSetValue === null || finalSetValue === undefined) {
       finalSetValue = fetched.set_value ?? 0;
-      logger.debug({ telcod, incoming: set_value, final: finalSetValue }, '[cache.dal] Preserving set_value');
+      // logger.debug({ telcod, final: finalSetValue }, '[cache.dal] Preserving set_value');
     }
   }
 
@@ -48,7 +74,7 @@ async function upsert({
   // En ese caso, hacemos UPDATE directo de solo los campos que cambian
   // para evitar que el SP lo resetee a 0
   if (set_value === null || set_value === undefined) {
-    logger.debug({ telcod, incoming_set: set_value }, '[cache.dal] Using direct UPDATE to preserve set_value');
+    // logger.debug({ telcod }, '[cache.dal] Using direct UPDATE');
     await query(`
       UPDATE dbo.RCN_CONT_CACHE
       SET sescod = @sescod,
@@ -64,18 +90,18 @@ async function upsert({
       WHERE telcod = @telcod
     `, req => {
       req.input('telcod', sql.VarChar(10), telcod);
-      req.input('sescod', sql.BigInt, sescod);
-      req.input('tracod', sql.VarChar(15), tracod);
-      req.input('traraz', sql.VarChar(120), traraz);
-      req.input('turno_cod', sql.Char(1), turno_cod);
-      req.input('session_active', sql.Bit, session_active ? 1 : 0);
+      req.input('sescod', sql.BigInt, finalSescod);
+      req.input('tracod', sql.VarChar(15), finalTracod);
+      req.input('traraz', sql.VarChar(120), finalTraraz);
+      req.input('turno_cod', sql.Char(1), finalTurnoCod);
+      req.input('session_active', sql.Bit, finalSessionActive ? 1 : 0);
       req.input('hil_act', sql.Int, hil_act);
       req.input('hil_turno', sql.Int, hil_turno);
       req.input('hil_start', sql.Int, finalHilStart);
       req.input('velocidad', sql.Int, velocidad);
     });
   } else {
-    logger.debug({ telcod, incoming_set: set_value }, '[cache.dal] Using SP with set_value');
+    // logger.debug({ telcod }, '[cache.dal] Using SP');
     // Si set_value viene con valor, usamos el SP normal
     await query(`
       EXEC dbo.sp_rcn_cont_cache_upsert
@@ -92,11 +118,11 @@ async function upsert({
         @velocidad=@p_velocidad
     `, req => {
       req.input('p_telcod', sql.VarChar(10), telcod);
-      req.input('p_sescod', sql.BigInt, sescod);
-      req.input('p_tracod', sql.VarChar(15), tracod);
-      req.input('p_traraz', sql.VarChar(120), traraz);
-      req.input('p_turno_cod', sql.Char(1), turno_cod);
-      req.input('p_session_active', sql.Bit, session_active ? 1 : 0);
+      req.input('p_sescod', sql.BigInt, finalSescod);
+      req.input('p_tracod', sql.VarChar(15), finalTracod);
+      req.input('p_traraz', sql.VarChar(120), finalTraraz);
+      req.input('p_turno_cod', sql.Char(1), finalTurnoCod);
+      req.input('p_session_active', sql.Bit, finalSessionActive ? 1 : 0);
       req.input('p_hil_act', sql.Int, hil_act);
       req.input('p_hil_turno', sql.Int, hil_turno);
       req.input('p_hil_start', sql.Int, finalHilStart);
@@ -107,10 +133,12 @@ async function upsert({
 
   // Leer directamente de la tabla en lugar de la vista para asegurar que set_value esté presente
   const rs = await query(`
-    SELECT telcod, sescod, tracod, traraz, turno_cod, session_active,
-           hil_act, hil_turno, hil_start, set_value, velocidad, updated_at
-    FROM dbo.RCN_CONT_CACHE
-    WHERE telcod = @telcod
+    SELECT c.telcod, c.sescod, c.tracod, c.traraz, c.turno_cod, c.session_active,
+           c.hil_act, c.hil_turno, c.hil_start, c.set_value, c.velocidad, c.updated_at,
+           s.inicio as inicio_dt
+    FROM dbo.RCN_CONT_CACHE c
+    LEFT JOIN dbo.RCN_CONT_SESION s ON c.sescod = s.sescod
+    WHERE c.telcod = @telcod
   `, r => r.input('telcod', sql.VarChar(10), telcod));
 
   return rs.recordset[0] || null;

@@ -20,11 +20,11 @@ module.exports.upsert = async (req, res, next) => {
   try {
     const {
       telcod,
-      sescod = null,
-      tracod = null,
-      traraz = null,
-      turno_cod = null,
-      session_active = 0,
+      sescod,        // undefined allowed
+      tracod,        // undefined allowed
+      traraz,        // undefined allowed
+      turno_cod,     // undefined allowed
+      session_active,// undefined allowed
       hil_act = 0,
       hil_turno = 0,
       hil_start,  // ← No default, para detectar si viene o no
@@ -33,7 +33,7 @@ module.exports.upsert = async (req, res, next) => {
     } = req.body || {};
 
     if (!telcod) throw new HttpError(400, 'telcod requerido');
-    if (sescod !== null && !Number.isInteger(sescod)) throw new HttpError(400, 'sescod inválido');
+    if (sescod !== undefined && sescod !== null && !Number.isInteger(sescod)) throw new HttpError(400, 'sescod inválido');
 
     // El DAL ahora maneja la preservación de hil_start cuando viene undefined
     // NO convertir 0 a undefined aquí, porque registrarFin puede legítimamente enviar valores numéricos

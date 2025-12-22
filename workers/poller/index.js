@@ -71,11 +71,12 @@ async function cycle(telar) {
     // Upsert cache
     const serverState = await upsertCache(API_BASE, {
       telcod: telar.telarKey,
-      sescod: snapshot.sescod ?? null,
-      tracod: snapshot.tracod ?? null,
-      traraz: snapshot.traraz ?? null,
-      turno_cod: snapshot.turno_cod ?? null,
-      session_active: snapshot.session_active ?? 0,
+      // NO ENVIAR metadata de sesión para no sobrescribirla con null/0
+      // sescod: snapshot.sescod ?? null,
+      // tracod: snapshot.tracod ?? null,
+      // traraz: snapshot.traraz ?? null,
+      // turno_cod: snapshot.turno_cod ?? null,
+      // session_active: snapshot.session_active ?? 0,
       hil_act: snapshot.hil_act ?? 0,
       hil_turno: snapshot.hil_turno ?? 0,
       // hil_start: snapshot.hil_start, // NO ENVIAR: Dejar que el servidor decida (preservar DB)
@@ -164,6 +165,26 @@ async function cycle(telar) {
         snapshot.hil_act = srv.hil_act;
         snapshot.hil_turno = srv.hil_turno;
         snapshot.set_value = srv.set_value;
+      }
+
+      // CRÍTICO: Inyectar metadata de sesión (Operario, Turno, Hora) desde el servidor al snapshot
+      // para que el Supervisor pueda mostrar quién está trabajando.
+
+      if (srv.session_active) {
+        snapshot.session_active = 1;
+        snapshot.tracod = srv.tracod;
+        snapshot.traraz = srv.traraz;
+        snapshot.turno_cod = srv.turno_cod;
+        snapshot.inicio_dt = srv.inicio_dt || srv.updated_at; // Fallback a updated_at si inicio_dt no viene
+
+        // DEBUG: Verificar qué estamos inyectando
+        logger.debug(`[poller] Metadata injected for ${telar.telarKey}: ${JSON.stringify({ tracod: srv.tracod, traraz: srv.traraz })}`);
+      } else {
+        snapshot.session_active = 0;
+        snapshot.tracod = null;
+        snapshot.traraz = null;
+        snapshot.turno_cod = null;
+        snapshot.inicio_dt = null;
       }
     }
 
