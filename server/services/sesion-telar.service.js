@@ -99,8 +99,6 @@ async function asignar({ sescod, telcod }) {
 
 /** Quita (desactiva) telar de sesión */
 async function quitar({ sescod, telcod }) {
-  const result = await stDAL.quitar({ sescod, telcod });
-
   // Obtener estado actual para resetear hil_turno
   const cacheDAL = require('../dal/cache.dal');
   const current = await cacheDAL.getByTelcod(telcod);
@@ -110,18 +108,7 @@ async function quitar({ sescod, telcod }) {
 
   logger.info({ telcod, current_hil_act: current?.hil_act, newHilStart }, 'Cerrando sesión: actualizando hil_start para resetear turno');
 
-  if (current) {
-    await cacheDAL.upsert({
-      ...current,
-      hil_start: newHilStart,
-      hil_act: current?.hil_act ?? 0,
-      session_active: 0,
-      sescod: null,
-      set_value: undefined // Forzar UPDATE directo (bypass SP) para proteger hil_act
-    });
-  }
-
-  // Emitir actualización por WebSocket
+  // 1. Emitir actualización por WebSocket INMEDIATAMENTE (Optimistic UI)
   try {
     const { bus } = require('../sockets');
     bus.telar.state(telcod, {
@@ -134,6 +121,19 @@ async function quitar({ sescod, telcod }) {
     });
   } catch (e) {
     logger.warn({ err: e.message }, 'Error emitiendo WS en quitar telar');
+  }
+
+  const result = await stDAL.quitar({ sescod, telcod });
+
+  if (current) {
+    await cacheDAL.upsert({
+      ...current,
+      hil_start: newHilStart,
+      hil_act: current?.hil_act ?? 0,
+      session_active: 0,
+      sescod: null,
+      set_value: undefined // Forzar UPDATE directo (bypass SP) para proteger hil_act
+    });
   }
 
   return result;

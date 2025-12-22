@@ -25,10 +25,18 @@ async function resetCounter(telcod) {
     const raw = (currentCache.hil_act || 0) + oldOffset;
     const newOffset = raw;
 
-    // 1. Actualizar offset persistente en TELAR
+    // 1. Emitir cambio por WS INMEDIATAMENTE (Optimistic UI)
+    try {
+        const { bus } = require('../sockets');
+        bus.telar.state(telcod, { telcod, hil_act: 0 });
+    } catch (e) {
+        logger.warn({ err: e.message }, 'Error emitiendo WS en resetCounter');
+    }
+
+    // 2. Actualizar offset persistente en TELAR
     await telaresDAL.updateAcumOffset(telcod, newOffset);
 
-    // 2. Actualizar visual en CACHE (opcional, el poller lo corregirá, pero para feedback inmediato)
+    // 3. Actualizar visual en CACHE (opcional, el poller lo corregirá, pero para feedback inmediato)
     // No pasamos ...currentCache ni set_value para forzar el uso del UPDATE directo en cache.dal.js
     // y así poder actualizar hil_acum_offset (que el SP no soporta aún).
     await cacheDAL.upsert({
@@ -38,18 +46,6 @@ async function resetCounter(telcod) {
     });
 
     logger.info({ telcod, newOffset }, 'Contador HIL. ACUM reseteado (nuevo offset)');
-
-    // 3. Emitir cambio por WS (para que el poller recargue el mapa o la UI se entere)
-    try {
-        const { bus } = require('../sockets');
-        // Emitimos evento de recarga de mapa si es necesario, o solo estado
-        // El poller necesita recargar el mapa para pillar el nuevo offset
-        // TODO: Implementar recarga de mapa en poller o esperar al siguiente ciclo si recarga auto
-        // Por ahora emitimos estado visual 0
-        bus.telar.state(telcod, { telcod, hil_act: 0 });
-    } catch (e) {
-        logger.warn({ err: e.message }, 'Error emitiendo WS en resetCounter');
-    }
 
     return { telcod, hil_act: 0, hil_acum_offset: newOffset };
 }
