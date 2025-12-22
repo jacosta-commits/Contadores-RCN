@@ -43,6 +43,7 @@ async function loadMap(API_BASE, grupo = null) {
     coilReset: r.coilReset ?? null,
     coilFinTurno: r.coilFinTurno ?? null,
     activo: !!r.activo,
+    hil_acum_offset: r.hil_acum_offset ?? 0,
   }));
 
   logger.info(`[map.loader] recibidos ${mapa.length} registros`);

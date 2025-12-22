@@ -81,6 +81,7 @@ async function cycle(telar) {
       hil_turno: snapshot.hil_turno ?? 0,
       // hil_start: snapshot.hil_start, // NO ENVIAR: Dejar que el servidor decida (preservar DB)
       velocidad: snapshot.velocidad ?? 0,
+      last_offset: telar.hil_acum_offset || 0, // CRÍTICO: Para evitar sobrescribir un reset pendiente
     });
 
     // SYNC: Solo para CALC y cambios de sesión
@@ -105,7 +106,8 @@ async function cycle(telar) {
         // Actualizamos memoria
         seedFromCache({
           telcod: telar.telarKey,
-          hil_start: srv.hil_start
+          hil_start: srv.hil_start,
+          hil_turno: Math.max(0, snapshot.hil_act - srv.hil_start) // CRÍTICO: Resetear turno en memoria
         });
 
         // Actualizamos snapshot actual para que el siguiente ciclo use el nuevo offset
@@ -117,6 +119,7 @@ async function cycle(telar) {
           const newHilTurno = Math.max(0, snapshot.hil_act - srv.hil_start);
           logger.debug(`[poller] SYNC: Recalculando hil_turno con nuevo offset (hil_act=${snapshot.hil_act}, new_offset=${srv.hil_start}, new_turno=${newHilTurno})`);
           snapshot.hil_turno = newHilTurno;
+          srv.hil_turno = newHilTurno; // CRÍTICO: Actualizar srv para que el bloque dirty no lo sobrescriba con el valor viejo
           dirty = true;
         }
       }
@@ -164,7 +167,18 @@ async function cycle(telar) {
         snapshot.hil_start = srv.hil_start;
         snapshot.hil_act = srv.hil_act;
         snapshot.hil_turno = srv.hil_turno;
+        snapshot.hil_turno = srv.hil_turno;
         snapshot.set_value = srv.set_value;
+      }
+
+      // 5. Sincronizar hil_acum_offset (CRÍTICO para reset instantáneo)
+      if (srv.hil_acum_offset !== undefined && srv.hil_acum_offset !== (telar.hil_acum_offset || 0)) {
+        logger.debug(`[poller] SYNC: hil_acum_offset divergió (local=${telar.hil_acum_offset}, server=${srv.hil_acum_offset}). Actualizando local.`);
+        telar.hil_acum_offset = srv.hil_acum_offset;
+        // No necesitamos hacer nada más, el siguiente ciclo de calc.reader.js o modbus.reader.js
+        // usará el nuevo offset automáticamente.
+        // Para CALC, calc.reader.js detectará el cambio en 'telar.hil_acum_offset' y ajustará hil_act.
+        // Para PLC, modbus.reader.js usará el nuevo offset.
       }
 
       // CRÍTICO: Inyectar metadata de sesión (Operario, Turno, Hora) desde el servidor al snapshot
@@ -214,7 +228,7 @@ async function main() {
   logger.info(`[poller] inicio → group=${GROUP || '(todos)'} period=${PERIOD_MS}ms conc=${CONC} PPR=${PPR}`);
   await initSockets(WS_URL);
 
-  const mapa = await loadMap(API_BASE, GROUP);
+  let mapa = await loadMap(API_BASE, GROUP);
   if (!mapa.length) {
     logger.warn('[poller] mapa vacío, nada que leer');
   } else {
@@ -225,6 +239,21 @@ async function main() {
 
   for (; ;) {
     const startLoop = Date.now();
+
+    // Reload map periodically (every 10s approx) to pick up config changes (like resets)
+    if (startLoop % 10000 < PERIOD_MS * 2) {
+      try {
+        const newMap = await loadMap(API_BASE, GROUP);
+        if (newMap && newMap.length > 0) {
+          // Update mapa in place or replace. Replacing is safer for config updates.
+          // We need to preserve state if any, but PLC is stateless here.
+          mapa = newMap;
+          // logger.debug('[poller] map refreshed');
+        }
+      } catch (e) {
+        logger.warn('[poller] map refresh failed:', e.message);
+      }
+    }
 
     for (const batch of chunk(mapa, CONC)) {
       await Promise.allSettled(

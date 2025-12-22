@@ -105,8 +105,8 @@ async function quitar({ sescod, telcod }) {
   const cacheDAL = require('../dal/cache.dal');
   const current = await cacheDAL.getByTelcod(telcod);
 
-  // Resetear hil_turno: hil_start = hil_act
-  const newHilStart = current?.hil_act || 0;
+  // Resetear hil_turno: hil_start = hil_act (Neto) + hil_acum_offset (Offset) = RAW
+  const newHilStart = (current?.hil_act || 0) + (current?.hil_acum_offset || 0);
 
   logger.info({ telcod, current_hil_act: current?.hil_act, newHilStart }, 'Cerrando sesión: actualizando hil_start para resetear turno');
 

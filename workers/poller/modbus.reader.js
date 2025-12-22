@@ -87,16 +87,17 @@ async function readPLC(telar) {
     // Aplicar offset local si existe (manejado por sync)
     // El 'hil_start' que viene en 'telar' es el que se sincroniza con la DB
     const offset = telar.hil_start || 0;
+    const acumOffset = telar.hil_acum_offset || 0;
 
-    // CORRECCIÓN CRÍTICA: hil_act es el ACUMULADO, no debe restarse el offset de turno.
-    // El offset de turno (hil_start) solo afecta a hil_turno.
-    const hil_act = hil_act_raw;
+    // CORRECCIÓN: hil_act es el VISUAL (Raw - OffsetAcum)
+    const hil_act = Math.max(0, hil_act_raw - acumOffset);
 
-    // Recalcular hil_turno usando el offset de inicio de sesión
-    const hil_turno_calc = Math.max(0, hil_act - offset);
+    // Recalcular hil_turno usando el offset de inicio de sesión y el RAW
+    // hil_start es el valor RAW al inicio del turno
+    const hil_turno_calc = Math.max(0, hil_act_raw - offset);
 
     if (telar.telarKey === '0069') {
-      logger.info({ telcod: telar.telarKey, raw: hil_act_raw, offset, hil_act, hil_turno_calc }, '[modbus] PLC Read');
+      logger.info({ telcod: telar.telarKey, raw: hil_act_raw, offset, acumOffset, hil_act, hil_turno_calc }, '[modbus] PLC Read');
     }
 
     return {

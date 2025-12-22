@@ -8,37 +8,50 @@ const cacheDAL = require('../dal/cache.dal');
  * Esto es útil para reiniciar el conteo de un lote o turno manualmente.
  */
 async function resetCounter(telcod) {
-    // Obtener estado actual
-    const current = await cacheDAL.getByTelcod(telcod);
-    if (!current) {
+    // Obtener estado actual de CACHE para saber el valor visual
+    const currentCache = await cacheDAL.getByTelcod(telcod);
+    if (!currentCache) {
         throw new Error(`Telar ${telcod} no encontrado en caché`);
     }
 
-    // Para resetear correctamente:
-    // - CALC: hil_start debe ajustarse al "pulse offset" actual para que el siguiente delta sea 0
-    // - PLC: hil_start debe ajustarse al valor crudo del PLC actual
-    // En ambos casos, la solución es: hil_start = current.hil_act + current.hil_start
-    // (Valor Visual + Offset Anterior = Valor Crudo Actual)
+    // Obtener configuración actual de TELAR para saber el offset anterior
+    const telaresDAL = require('../dal/telares.dal');
+    const currentTelar = await telaresDAL.getByTelcod(telcod);
+    const oldOffset = currentTelar?.hil_acum_offset || 0;
 
-    const newHilStart = (current.hil_act || 0) + (current.hil_start || 0);
+    // Calcular nuevo offset:
+    // Raw = Visual + OldOffset
+    // Queremos que Visual sea 0, así que NewOffset = Raw
+    const raw = (currentCache.hil_act || 0) + oldOffset;
+    const newOffset = raw;
 
+    // 1. Actualizar offset persistente en TELAR
+    await telaresDAL.updateAcumOffset(telcod, newOffset);
+
+    // 2. Actualizar visual en CACHE (opcional, el poller lo corregirá, pero para feedback inmediato)
+    // No pasamos ...currentCache ni set_value para forzar el uso del UPDATE directo en cache.dal.js
+    // y así poder actualizar hil_acum_offset (que el SP no soporta aún).
     await cacheDAL.upsert({
-        ...current,
-        hil_start: newHilStart,  // Nuevo offset
-        hil_act: 0                // Contador visual a 0
+        telcod,
+        hil_act: 0,
+        hil_acum_offset: newOffset
     });
 
-    logger.info({ telcod, newHilStart }, 'Contador reseteado a 0 con nuevo hil_start');
+    logger.info({ telcod, newOffset }, 'Contador HIL. ACUM reseteado (nuevo offset)');
 
-    // Emitir cambio por WS
+    // 3. Emitir cambio por WS (para que el poller recargue el mapa o la UI se entere)
     try {
         const { bus } = require('../sockets');
-        bus.telar.state(telcod, { telcod, hil_act: 0, hil_start: newHilStart });
+        // Emitimos evento de recarga de mapa si es necesario, o solo estado
+        // El poller necesita recargar el mapa para pillar el nuevo offset
+        // TODO: Implementar recarga de mapa en poller o esperar al siguiente ciclo si recarga auto
+        // Por ahora emitimos estado visual 0
+        bus.telar.state(telcod, { telcod, hil_act: 0 });
     } catch (e) {
         logger.warn({ err: e.message }, 'Error emitiendo WS en resetCounter');
     }
 
-    return { telcod, hil_act: 0, hil_start: newHilStart };
+    return { telcod, hil_act: 0, hil_acum_offset: newOffset };
 }
 
 module.exports = { resetCounter };

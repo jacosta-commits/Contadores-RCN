@@ -16,6 +16,8 @@ async function upsert({
   hil_start = null,
   set_value,
   velocidad = 0,
+  hil_acum_offset, // Removed default 0
+  last_offset,     // New argument for concurrency check
 }) {
   // Valores finales (si vienen undefined, se leerán de la DB)
   let finalSescod = sescod;
@@ -71,24 +73,40 @@ async function upsert({
   }
 
   // Si set_value es undefined, significa que el poller NO quiere modificarlo
-  // En ese caso, hacemos UPDATE directo de solo los campos que cambian
-  // para evitar que el SP lo resetee a 0
-  if (set_value === null || set_value === undefined) {
-    // logger.debug({ telcod }, '[cache.dal] Using direct UPDATE');
-    await query(`
+  // O si hil_act es 0, forzamos UPDATE directo para evitar que el SP bloquee el reset (protección de decremento)
+  if (set_value === null || set_value === undefined || hil_act === 0) {
+    // Construcción dinámica del UPDATE para manejar hil_acum_offset opcional y check de concurrencia
+    let updateQ = `
       UPDATE dbo.RCN_CONT_CACHE
       SET sescod = @sescod,
           tracod = @tracod,
           traraz = @traraz,
           turno_cod = @turno_cod,
           session_active = @session_active,
-          hil_act = @hil_act,
           hil_turno = @hil_turno,
           hil_start = @hil_start,
           velocidad = @velocidad,
           updated_at = GETDATE()
-      WHERE telcod = @telcod
-    `, req => {
+    `;
+
+    // Solo actualizar hil_acum_offset si se provee (Supervisor Reset)
+    if (hil_acum_offset !== undefined) {
+      updateQ += `, hil_acum_offset = @hil_acum_offset`;
+    }
+
+    // Actualizar hil_act CONDICIONALMENTE:
+    // Si se provee last_offset (desde Poller), solo actualizar si coincide con la DB.
+    // Si no coincide, significa que hubo un reset (offset cambió) y el dato del poller es viejo -> IGNORAR.
+    // Si no se provee last_offset (Supervisor), actualizar siempre.
+    if (last_offset !== undefined) {
+      updateQ += `, hil_act = CASE WHEN hil_acum_offset = @last_offset THEN @hil_act ELSE hil_act END`;
+    } else {
+      updateQ += `, hil_act = @hil_act`;
+    }
+
+    updateQ += ` WHERE telcod = @telcod`;
+
+    await query(updateQ, req => {
       req.input('telcod', sql.VarChar(10), telcod);
       req.input('sescod', sql.BigInt, finalSescod);
       req.input('tracod', sql.VarChar(15), finalTracod);
@@ -99,6 +117,12 @@ async function upsert({
       req.input('hil_turno', sql.Int, hil_turno);
       req.input('hil_start', sql.Int, finalHilStart);
       req.input('velocidad', sql.Int, velocidad);
+      if (hil_acum_offset !== undefined) {
+        req.input('hil_acum_offset', sql.Int, hil_acum_offset);
+      }
+      if (last_offset !== undefined) {
+        req.input('last_offset', sql.Int, last_offset);
+      }
     });
   } else {
     // logger.debug({ telcod }, '[cache.dal] Using SP');
@@ -134,7 +158,7 @@ async function upsert({
   // Leer directamente de la tabla en lugar de la vista para asegurar que set_value esté presente
   const rs = await query(`
     SELECT c.telcod, c.sescod, c.tracod, c.traraz, c.turno_cod, c.session_active,
-           c.hil_act, c.hil_turno, c.hil_start, c.set_value, c.velocidad, c.updated_at,
+           c.hil_act, c.hil_turno, c.hil_start, c.set_value, c.velocidad, c.updated_at, c.hil_acum_offset,
            s.inicio as inicio_dt
     FROM dbo.RCN_CONT_CACHE c
     LEFT JOIN dbo.RCN_CONT_SESION s ON c.sescod = s.sescod

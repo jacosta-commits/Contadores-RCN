@@ -23,7 +23,9 @@ function ensureState(telcod) {
       hil_start: 0,
       set_value: 0,
       velocidad: 0,
+      velocidad: 0,
       session_active: 0,
+      lastAcumOffset: undefined,
     });
   }
   return state.get(telcod);
@@ -98,11 +100,22 @@ function computeFromPulse({ telar, pulse, ts, pulsesPerRow = 1 }) {
 
   // Acumulados en memoria (SIN división, igual que tu servidor viejo)
   s.hil_act += dPulses;
-  // s.hil_turno += dPulses; // ELIMINADO: No acumular delta, derivar de hil_start
+  s.hil_turno += dPulses; // RESTAURADO: Acumular delta independientemente
 
-  // NEW: Derivar hil_turno de hil_start (que se sincroniza con el servidor)
-  // Esto asegura que si hil_start cambia (reset), hil_turno se ajuste automáticamente
-  s.hil_turno = Math.max(0, s.hil_act - s.hil_start);
+  // NEW: Ajuste por cambio de hil_acum_offset (Reset desde Supervisor)
+  const currentOffset = telar.hil_acum_offset || 0;
+  if (s.lastAcumOffset === undefined) {
+    s.lastAcumOffset = currentOffset;
+  } else if (s.lastAcumOffset !== currentOffset) {
+    const diff = currentOffset - s.lastAcumOffset;
+    logger.info(`[calc] RESET DETECTED for ${telcod}: hil_act=${s.hil_act}, currentOffset=${currentOffset}, lastOffset=${s.lastAcumOffset}, diff=${diff}`);
+    s.hil_act = Math.max(0, s.hil_act - diff);
+    s.lastAcumOffset = currentOffset;
+    logger.info(`[calc] RESET RESULT for ${telcod}: New hil_act=${s.hil_act}`);
+  }
+
+  // ELIMINADO: No derivar hil_turno de hil_act para evitar que el reset de ACUM afecte al TURNO
+  // s.hil_turno = Math.max(0, s.hil_act - s.hil_start);
 
   // NEW: Derivar hil_turno de hil_start (que se sincroniza con el servidor)
   // ELIMINADO: Esto acoplaba hil_turno a hil_act, impidiendo resetear hil_act sin afectar hil_turno.
