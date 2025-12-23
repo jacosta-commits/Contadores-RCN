@@ -27,7 +27,7 @@ function buildConfig() {
       useUTC: false,
     },
     pool: {
-      max: env.DB_POOL_MAX ? Number(env.DB_POOL_MAX) : 10,
+      max: env.DB_POOL_MAX ? Number(env.DB_POOL_MAX) : 100, // Aumentado para soportar ~70 usuarios concurrentes
       min: 0,
       idleTimeoutMillis: 30000,
     },

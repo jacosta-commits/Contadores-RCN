@@ -89,8 +89,10 @@ async function readPLC(telar) {
     const offset = telar.hil_start || 0;
     const acumOffset = telar.hil_acum_offset || 0;
 
-    // CORRECCIÓN: hil_act es el VISUAL (Raw - OffsetAcum)
-    const hil_act = Math.max(0, hil_act_raw - acumOffset);
+    // CORRECCIÓN: Para PLC, hil_act es DIRECTAMENTE lo que leemos.
+    // El reset se hace por coil en el PLC, así que el RAW vuelve a 0.
+    // No usamos offset de software para PLC.
+    const hil_act = hil_act_raw;
 
     // Recalcular hil_turno usando el offset de inicio de sesión y el RAW
     // hil_start es el valor RAW al inicio del turno
@@ -115,6 +117,25 @@ async function readPLC(telar) {
 }
 
 /**
+ * Escribe un pulso (True -> wait -> False) en un coil
+ */
+async function pulseCoil(telar, coilAddr) {
+  if (coilAddr === null || coilAddr === undefined) return;
+  const client = await getClient(telar);
+  try {
+    // Escribir TRUE
+    await client.writeCoil(coilAddr, true);
+    // Esperar un poco (ej. 200ms)
+    await new Promise(r => setTimeout(r, 200));
+    // Escribir FALSE
+    await client.writeCoil(coilAddr, false);
+    logger.info({ telcod: telar.telarKey, coilAddr }, '[modbus] Pulse sent');
+  } finally {
+    try { await client.close(); } catch (_) { }
+  }
+}
+
+/**
  * CALC: lee solo 1 registro (pulsos acumulados)
  * En la VIEW, holdingOffset = calc_pulse_offset.
  */
@@ -129,4 +150,4 @@ async function readPulse(telar) {
   }
 }
 
-module.exports = { readPLC, readPulse };
+module.exports = { readPLC, readPulse, pulseCoil };
