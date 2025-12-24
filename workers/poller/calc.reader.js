@@ -43,6 +43,8 @@ function seedFromCache(params) {
   if (params.hil_start !== undefined) s.hil_start = Number(params.hil_start);
   if (params.set_value !== undefined) s.set_value = Number(params.set_value);
   if (params.session_active !== undefined) s.session_active = Number(params.session_active);
+  // CRITICAL: Restaurar lastAcumOffset para evitar "falsos resets" si el mapa parpadea a 0
+  if (params.hil_acum_offset !== undefined) s.lastAcumOffset = Number(params.hil_acum_offset);
 }
 
 /**
