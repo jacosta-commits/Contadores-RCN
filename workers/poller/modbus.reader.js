@@ -94,12 +94,13 @@ async function readPLC(telar) {
     // No usamos offset de software para PLC.
     const hil_act = hil_act_raw;
 
-    // Recalcular hil_turno usando el offset de inicio de sesión y el RAW
-    // hil_start es el valor RAW al inicio del turno
-    const hil_turno_calc = Math.max(0, hil_act_raw - offset);
+    // Para PLC, hil_turno y hil_start vienen del PLC (si existen en el mapa)
+    // Si no, usamos el cálculo local como fallback, pero la autoridad es el PLC.
+    const hil_turno_final = (telar.plc_hil_turno_rel != null) ? hil_turno : Math.max(0, hil_act_raw - offset);
+    const hil_start_final = (telar.plc_hil_start_rel != null) ? hil_start : offset;
 
     if (telar.telarKey === '0069') {
-      logger.info({ telcod: telar.telarKey, raw: hil_act_raw, offset, acumOffset, hil_act, hil_turno_calc }, '[modbus] PLC Read');
+      logger.info({ telcod: telar.telarKey, raw: hil_act_raw, offset, acumOffset, hil_act, hil_turno: hil_turno_final, hil_start: hil_start_final }, '[modbus] PLC Read');
     }
 
     return {
@@ -107,9 +108,9 @@ async function readPLC(telar) {
       hil_act,
       hil_act_raw, // Guardamos el raw para usarlo como nuevo offset al resetear
       velocidad,
-      hil_turno: hil_turno_calc, // Usamos el calculado localmente
+      hil_turno: hil_turno_final,
       set_value: 0,
-      hil_start: offset,
+      hil_start: hil_start_final,
     };
   } finally {
     try { await client.close(); } catch (_) { }

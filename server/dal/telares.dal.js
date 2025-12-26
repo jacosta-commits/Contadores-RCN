@@ -49,7 +49,8 @@ async function getMapView({ grupo = null } = {}) {
   let q = `
     SELECT v.telarKey, v.sqlTelar, v.telnom, v.grupo, v.modbusIP, v.modbusPort, v.modbusID,
            v.holdingOffset, v.[mode], v.coilReset, v.coilFinTurno, v.activo,
-           t.hil_acum_offset
+           t.hil_acum_offset,
+           t.plc_hil_act_rel, t.plc_velocidad_rel, t.plc_hil_turno_rel, t.plc_set_rel, t.plc_hil_start_rel
     FROM dbo.VW_RCN_CONT_TELAR_MAP v
     LEFT JOIN dbo.RCN_CONT_TELAR t ON v.sqlTelar = t.telcod
     WHERE 1=1

@@ -44,6 +44,11 @@ async function loadMap(API_BASE, grupo = null) {
     coilFinTurno: r.coilFinTurno ?? null,
     activo: !!r.activo,
     hil_acum_offset: r.hil_acum_offset ?? 0,
+    plc_hil_act_rel: r.plc_hil_act_rel,
+    plc_velocidad_rel: r.plc_velocidad_rel,
+    plc_hil_turno_rel: r.plc_hil_turno_rel,
+    plc_set_rel: r.plc_set_rel,
+    plc_hil_start_rel: r.plc_hil_start_rel,
   }));
 
   logger.info(`[map.loader] recibidos ${mapa.length} registros`);

@@ -115,7 +115,10 @@ async function cycle(telar) {
 
         // CRÍTICO: Recalcular hil_turno inmediatamente con el nuevo offset
         // para evitar que el siguiente ciclo envíe el valor viejo
-        if (snapshot.hil_act !== undefined) {
+        // CRÍTICO: Recalcular hil_turno inmediatamente con el nuevo offset
+        // para evitar que el siguiente ciclo envíe el valor viejo
+        // SOLO para CALC. Para PLC, hil_turno viene del PLC.
+        if (snapshot.hil_act !== undefined && telar.mode !== 'PLC') {
           const newHilTurno = Math.max(0, snapshot.hil_act - srv.hil_start);
           logger.debug(`[poller] SYNC: Recalculando hil_turno con nuevo offset (hil_act=${snapshot.hil_act}, new_offset=${srv.hil_start}, new_turno=${newHilTurno})`);
           snapshot.hil_turno = newHilTurno;

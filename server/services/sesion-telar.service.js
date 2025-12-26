@@ -126,6 +126,31 @@ async function quitar({ sescod, telcod }) {
     logger.warn({ err: e.message }, 'Error emitiendo WS en quitar telar');
   }
 
+  // 1b. Intentar enviar pulso de FIN TURNO al PLC (si corresponde)
+  try {
+    const telaresDAL = require('../dal/telares.dal');
+    const modbusReader = require('../../workers/poller/modbus.reader');
+
+    // Necesitamos la config completa para saber si es PLC y su IP
+    const config = await telaresDAL.getByTelcod(telcod);
+
+    if (config && config.modo === 'PLC' && config.plc_coil_fin_turno != null) {
+      const telarObj = {
+        modbusIP: config.modbus_ip,
+        modbusPort: config.modbus_port,
+        modbusID: config.modbus_unit_id,
+        telarKey: telcod
+      };
+
+      logger.info({ telcod, coil: config.plc_coil_fin_turno }, '[sesion-telar] Enviando pulso FIN TURNO a PLC...');
+      // No esperamos el await para no bloquear la respuesta HTTP (fire and forget)
+      modbusReader.pulseCoil(telarObj, config.plc_coil_fin_turno)
+        .catch(e => logger.error({ err: e.message, telcod }, '[sesion-telar] Error enviando pulso FIN TURNO'));
+    }
+  } catch (e) {
+    logger.error({ err: e.message, telcod }, '[sesion-telar] Error preparando pulso PLC');
+  }
+
   const result = await stDAL.quitar({ sescod, telcod });
 
   if (current) {
