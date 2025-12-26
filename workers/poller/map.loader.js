@@ -47,8 +47,7 @@ async function loadMap(API_BASE, grupo = null) {
   }));
 
   logger.info(`[map.loader] recibidos ${mapa.length} registros`);
-  // Filtrar telar 0069 temporalmente para evitar lag por timeouts
-  return mapa.filter(t => t.telarKey !== '0069');
+  return mapa;
 }
 
 module.exports = { loadMap };

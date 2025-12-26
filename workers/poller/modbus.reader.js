@@ -125,8 +125,8 @@ async function pulseCoil(telar, coilAddr) {
   try {
     // Escribir TRUE
     await client.writeCoil(coilAddr, true);
-    // Esperar un poco (ej. 200ms)
-    await new Promise(r => setTimeout(r, 200));
+    // Esperar un poco (ej. 500ms, igual que Contadores_02)
+    await new Promise(r => setTimeout(r, 500));
     // Escribir FALSE
     await client.writeCoil(coilAddr, false);
     logger.info({ telcod: telar.telarKey, coilAddr }, '[modbus] Pulse sent');
@@ -150,4 +150,18 @@ async function readPulse(telar) {
   }
 }
 
-module.exports = { readPLC, readPulse, pulseCoil };
+/**
+ * Escribe un valor en un registro Holding
+ */
+async function writeRegister(telar, addr, value) {
+  if (addr === null || addr === undefined) return;
+  const client = await getClient(telar);
+  try {
+    await client.writeRegister(addr, value);
+    logger.info({ telcod: telar.telarKey, addr, value }, '[modbus] Register written');
+  } finally {
+    try { await client.close(); } catch (_) { }
+  }
+}
+
+module.exports = { readPLC, readPulse, pulseCoil, writeRegister };
