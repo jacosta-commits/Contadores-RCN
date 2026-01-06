@@ -13,8 +13,8 @@
     "poller": "node workers/poller/index.js",
     "snapshots": "node workers/snapshots/index.js",
     "alerts": "node workers/alerts/index.js",
-    "pm2:start": "pm2 start pm2/ecosystem.contadores.js",
-    "pm2:reload": "pm2 reload pm2/ecosystem.contadores.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:reload": "pm2 reload ecosystem.config.js",
     "pm2:logs": "pm2 logs --lines 300",
     "test": "echo \"No hay tests aún\" && exit 0"
   },
