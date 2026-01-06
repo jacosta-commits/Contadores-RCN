@@ -103,13 +103,27 @@ function setupFilter() {
     if (!input) return;
 
     input.oninput = (e) => {
-        const val = e.target.value.toLowerCase();
+        const val = e.target.value.trim();
         const cards = document.querySelectorAll('.main-container');
+
+        // Si está vacío, mostrar todos
+        if (!val) {
+            cards.forEach(c => c.style.display = '');
+            return;
+        }
+
+        // Parsear múltiples códigos: separados por coma o espacio
+        const filters = val.toLowerCase()
+            .split(/[,\s]+/)           // Split por coma o espacios
+            .map(f => f.trim())         // Trim cada uno
+            .filter(f => f.length > 0); // Remover vacíos
 
         cards.forEach(c => {
             const telcod = c.dataset.telcod.toLowerCase();
-            if (telcod.includes(val)) c.style.display = '';
-            else c.style.display = 'none';
+
+            // Mostrar si coincide con algún filtro (partial match)
+            const match = filters.some(f => telcod.includes(f));
+            c.style.display = match ? '' : 'none';
         });
     };
 }
