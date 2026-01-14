@@ -8,47 +8,69 @@
 const ModbusRTU = require('modbus-serial');
 const logger = require('../../server/lib/logger');
 
-const TCP_TIMEOUT = 5000; // ms (antes 600)
-const TCP_RETRIES = 1;
+const TCP_TIMEOUT = 2000; // ms (antes 5000) - Reducido para no bloquear el ciclo si hay muchas máquinas apagadas
+const TCP_RETRIES = 0;    // 0 retries para fallar rápido
 const HOLD_LEN_PLC = 16;  // margen
-const READ_TIMEOUT = 5000; // ms (antes 900)
+const READ_TIMEOUT = 2000; // ms (antes 5000)
 
-// const pool = new Map(); // Pooling deshabilitado para imitar Contadores_02 y evitar problemas con PLCs mañosos
+const pool = new Map(); // IP -> Client
 
 async function getClient(t) {
-  // Crear cliente y conectar (SIEMPRE NUEVO)
+  const key = `${t.modbusIP}:${t.modbusPort || 502}`;
+
+  // 1. Intentar reutilizar del pool
+  if (pool.has(key)) {
+    const cached = pool.get(key);
+    if (cached.isOpen) {
+      cached.setID(t.modbusID || 1);
+      return cached;
+    } else {
+      // Si está cerrado o roto, lo sacamos
+      pool.delete(key);
+    }
+  }
+
+  // 2. Crear nuevo cliente
   const client = new ModbusRTU();
   client.setTimeout(TCP_TIMEOUT);
 
   let connected = false;
   for (let i = 0; i <= TCP_RETRIES; i++) {
     try {
-      // Pasar timeout en connectTCP también
       await client.connectTCP(t.modbusIP, { port: t.modbusPort || 502, timeout: TCP_TIMEOUT });
       client.setID(t.modbusID || 1);
       connected = true;
       break;
     } catch (e) {
       if (i === TCP_RETRIES) {
-        try { await client.close(); } catch (_) { } // Limpiar
+        try { await client.close(); } catch (_) { }
         throw e;
       }
     }
   }
 
   if (!connected) throw new Error('No se pudo conectar Modbus');
+
+  // 3. Guardar en pool
+  pool.set(key, client);
   return client;
 }
 
 async function readHolding(client, addr, len = 1) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), READ_TIMEOUT);
+  // Promise.race para forzar timeout real (modbus-serial no soporta AbortSignal)
+  const readPromise = client.readHoldingRegisters(addr, len);
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Modbus Read Timeout')), READ_TIMEOUT)
+  );
+
   try {
-    const res = await client.readHoldingRegisters(addr, len);
-    clearTimeout(timer);
+    const res = await Promise.race([readPromise, timeoutPromise]);
     return res.data || res.buffer;
   } catch (e) {
-    clearTimeout(timer);
+    // Si falla por timeout, el socket queda en estado desconocido. Cerrarlo.
+    if (e.message === 'Modbus Read Timeout') {
+      try { await client.close(); } catch (_) { }
+    }
     throw e;
   }
 }
@@ -113,7 +135,7 @@ async function readPLC(telar) {
       hil_start: hil_start_final,
     };
   } finally {
-    try { await client.close(); } catch (_) { }
+    // try { await client.close(); } catch (_) { } // POOLING
   }
 }
 
@@ -124,15 +146,27 @@ async function pulseCoil(telar, coilAddr) {
   if (coilAddr === null || coilAddr === undefined) return;
   const client = await getClient(telar);
   try {
-    // Escribir TRUE
-    await client.writeCoil(coilAddr, true);
-    // Esperar un poco (ej. 500ms, igual que Contadores_02)
+    // Write TRUE
+    const p1 = client.writeCoil(coilAddr, true);
+    const t1 = new Promise((_, r) => setTimeout(() => r(new Error('Modbus Write Timeout')), READ_TIMEOUT));
+    await Promise.race([p1, t1]);
+
+    // Wait
     await new Promise(r => setTimeout(r, 500));
-    // Escribir FALSE
-    await client.writeCoil(coilAddr, false);
+
+    // Write FALSE
+    const p2 = client.writeCoil(coilAddr, false);
+    const t2 = new Promise((_, r) => setTimeout(() => r(new Error('Modbus Write Timeout')), READ_TIMEOUT));
+    await Promise.race([p2, t2]);
+
     logger.info({ telcod: telar.telarKey, coilAddr }, '[modbus] Pulse sent');
+  } catch (e) {
+    if (e.message === 'Modbus Write Timeout') {
+      try { await client.close(); } catch (_) { }
+    }
+    throw e;
   } finally {
-    try { await client.close(); } catch (_) { }
+    // try { await client.close(); } catch (_) { } // POOLING
   }
 }
 
@@ -147,7 +181,7 @@ async function readPulse(telar) {
     const pulse = data?.[0] ?? 0;
     return pulse;
   } finally {
-    try { await client.close(); } catch (_) { }
+    // try { await client.close(); } catch (_) { } // POOLING
   }
 }
 
@@ -158,10 +192,18 @@ async function writeRegister(telar, addr, value) {
   if (addr === null || addr === undefined) return;
   const client = await getClient(telar);
   try {
-    await client.writeRegister(addr, value);
+    const p = client.writeRegister(addr, value);
+    const t = new Promise((_, r) => setTimeout(() => r(new Error('Modbus Write Timeout')), READ_TIMEOUT));
+    await Promise.race([p, t]);
+
     logger.info({ telcod: telar.telarKey, addr, value }, '[modbus] Register written');
+  } catch (e) {
+    if (e.message === 'Modbus Write Timeout') {
+      try { await client.close(); } catch (_) { }
+    }
+    throw e;
   } finally {
-    try { await client.close(); } catch (_) { }
+    // try { await client.close(); } catch (_) { } // POOLING
   }
 }
 

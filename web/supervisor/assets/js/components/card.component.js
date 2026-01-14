@@ -1,6 +1,8 @@
 // web/supervisor/assets/js/components/card.component.js
 import { api } from '../api.js';
 
+import { tween } from '../../../../shared/js/util/tween.js';
+
 function z4(n) { return String(n ?? 0).padStart(4, '0'); }
 
 export function createCardHTML(t) {
@@ -86,10 +88,14 @@ export function updateCard(telcod, data) {
   const valAct = document.getElementById(`val-act-${telcod}`);
   const valSet = document.getElementById(`val-set-${telcod}`);
 
+  // Start y Set no suelen cambiar rápido, pero podemos animar igual o dejar estático
   if (valStart) valStart.textContent = z4(data.hil_start);
-  if (valTurno) valTurno.textContent = z4(data.hil_turno);
-  if (valAct) valAct.textContent = z4(data.hil_act);
   if (valSet) valSet.textContent = z4(data.set_value);
+
+  // Turno y Acumulado SI cambian rápido -> Tween
+  // Usamos 150ms para coincidir con el POLLER_PERIOD_MS
+  if (valTurno) tween(valTurno, data.hil_turno, 150, z4);
+  if (valAct) tween(valAct, data.hil_act, 150, z4);
 
   // 3. Operario / Sesión
   const opEl = document.getElementById(`operario-${telcod}`);

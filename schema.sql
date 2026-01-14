@@ -462,8 +462,11 @@ SELECT
   c.hil_start,
   c.set_value,
   c.velocidad,
-  c.updated_at
-FROM dbo.RCN_CONT_CACHE c;
+  c.updated_at,
+  c.hil_acum_offset,
+  s.inicio AS inicio_dt
+FROM dbo.RCN_CONT_CACHE c
+LEFT JOIN dbo.RCN_CONT_SESION s ON c.sescod = s.sescod;
 GO
 
 -- Vista de resumen INICIO/FIN por (sescod, telcod) para reportes

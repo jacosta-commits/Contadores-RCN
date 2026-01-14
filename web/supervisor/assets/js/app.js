@@ -119,10 +119,12 @@ function setupFilter() {
             .filter(f => f.length > 0); // Remover vacíos
 
         cards.forEach(c => {
-            const telcod = c.dataset.telcod.toLowerCase();
+            // Buscar en el TÍTULO visible del telar (no en el código)
+            const titleEl = c.querySelector('.title-telar');
+            const titleText = titleEl ? titleEl.textContent.toLowerCase() : '';
 
-            // Mostrar si coincide con algún filtro (partial match)
-            const match = filters.some(f => telcod.includes(f));
+            // Mostrar si el título contiene algún filtro
+            const match = filters.some(f => titleText.includes(f));
             c.style.display = match ? '' : 'none';
         });
     };

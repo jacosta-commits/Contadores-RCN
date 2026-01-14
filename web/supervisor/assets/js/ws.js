@@ -50,8 +50,16 @@ export function init({ onState = () => { } } = {}) {
 
         socket.on('connect', () => console.debug('[ws] connected /telar', socket.id));
         socket.on('state', handleIncoming);
+        socket.on('state.push', handleIncoming); // FIX: Server emits 'state.push' to /telar
         socket.on('broadcast', handleIncoming);
         socket.on('update', handleIncoming);
+        socket.on('snapshot', handleIncoming); // FIX: Listen for initial snapshot
+
+        // Listen for forced reload from admin
+        socket.on('force-reload', () => {
+            console.warn('[ws] force-reload received - reloading page...');
+            setTimeout(() => window.location.reload(), 500);
+        });
 
     } catch (e) {
         console.warn('[ws] init failed:', e);

@@ -8,6 +8,7 @@ const llamadaSvc = require('../services/llamada.service');
 const checklistSvc = require('../services/checklist.service');
 const lecturaSvc = require('../services/lectura.service');
 const cacheSvc = require('../services/cache.service');
+const persistence = require('../../workers/poller/persistence'); // Acceso directo a memoria del Poller
 
 const NS = '/telar';
 const roomOf = (telcod) => `telar:${String(telcod).trim()}`;
@@ -57,15 +58,31 @@ async function joinMany(socket, telcods, ack) {
     // Únete a todas
     for (const t of list) await socket.join(roomOf(t));
 
-    // Snapshot inicial (desde caché) por cada telcod
+    // Snapshot inicial (OPTIMIZADO: Memoria -> DB)
     try {
-      const rec = await cacheSvc.getRecovery(); // array
+      const memState = persistence.getState();
+      const dbNeeded = [];
+
       for (const t of list) {
-        const snap = (rec || []).find(r => r.telcod === t);
-        if (snap) socket.emit('snapshot', { telcod: t, ...snap });
+        if (memState[t]) {
+          // Si está en memoria, enviar INMEDIATAMENTE (0ms latency)
+          socket.emit('snapshot', { telcod: t, ...memState[t] });
+        } else {
+          // Si no, marcar para buscar en DB
+          dbNeeded.push(t);
+        }
+      }
+
+      // Fallback a DB solo para los que no estaban en memoria
+      if (dbNeeded.length > 0) {
+        const rec = await cacheSvc.getRecovery(); // array
+        for (const t of dbNeeded) {
+          const snap = (rec || []).find(r => r.telcod === t);
+          if (snap) socket.emit('snapshot', { telcod: t, ...snap });
+        }
       }
     } catch (e) {
-      logger.warn(`[socket${NS}] snapshot cache error: ${e.message}`);
+      logger.warn(`[socket${NS}] snapshot error: ${e.message}`);
     }
 
     const res = { ok: true, telcods: list };
@@ -204,13 +221,14 @@ function setup(io) {
     });
 
     // ===== Canal de subida para el worker =====
-    // Acepta 'state.push' o 'state' (por compat), re-emite a la sala.
     const handleUp = (body = {}, ack) => {
       try {
         if (!isWorker(socket)) throw new Error('unauthorized');
         const telcod = String(body.telcod || body.tel || body.key || '').trim();
         if (!telcod) throw new Error('telcod requerido');
+
         emitToTelar(telcod, 'state', body);
+
         const res = { ok: true };
         if (typeof ack === 'function') return ack(res);
       } catch (err) {

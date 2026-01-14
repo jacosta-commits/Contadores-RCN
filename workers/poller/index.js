@@ -17,8 +17,9 @@ const { readPLC, readPulse } = require('./modbus.reader');
 const { seedFromCache, computeFromPulse } = require('./calc.reader');
 const { upsertCache, pullRecovery } = require('./cache.sync');
 const { initSockets, emitTelarState, emitSupervisorState } = require('./broadcast');
+const persistence = require('./persistence');
 
-const API_BASE = env.API_BASE || `http://${env.HOST || '127.0.0.1'}:${env.PORT || 8080}/api/v1`;
+const API_BASE = env.API_BASE || `http://127.0.0.1:${env.PORT || 8080}/api/v1`;
 const WS_URL = env.WS_URL || `http://${env.HOST || '127.0.0.1'}:${env.PORT || 8080}`;
 const GROUP = env.POLLER_GROUP || null;            // null = todos
 const PERIOD_MS = Number(env.POLLER_PERIOD_MS || 1000);
@@ -33,24 +34,49 @@ function chunk(arr, n) {
 }
 
 async function primeCalcBaselines() {
-  try {
-    const rec = await pullRecovery(API_BASE);
-    for (const r of rec) {
-      seedFromCache({
-        telcod: r.telcod,
-        hil_act: r.hil_act,
-        hil_turno: r.hil_turno,
-        hil_start: r.hil_start,
-        set_value: r.set_value,
-      });
+  // 1. Intentar cargar desde disco (Rápido)
+  const localState = persistence.load();
+  if (localState.length > 0) {
+    logger.info(`[poller] baselines cargadas desde disco (${localState.length})`);
+    // Init persistence baseline from disk (Best effort)
+    persistence.initState(localState);
+    for (const r of localState) {
+      seedFromCache(r);
     }
-    logger.info(`[poller] baselines CALC sembradas desde recovery (${rec.length})`);
-  } catch (e) {
-    logger.warn('[poller] no se pudo sembrar baselines desde recovery:', e.message);
+    return; // Éxito rápido
+  }
+
+  // 2. Fallback a DB (Lento)
+  let attempts = 0;
+  while (true) {
+    try {
+      attempts++;
+      const rec = await pullRecovery(API_BASE);
+      // Init persistence baseline from DB (Authoritative)
+      persistence.initState(rec);
+      for (const r of rec) {
+        seedFromCache({
+          telcod: r.telcod,
+          hil_act: r.hil_act,
+          hil_turno: r.hil_turno,
+          hil_start: r.hil_start,
+          set_value: r.set_value,
+        });
+      }
+      logger.info(`[poller] baselines CALC sembradas desde recovery (${rec.length})`);
+      break; // Éxito
+    } catch (e) {
+      logger.warn(`[poller] fallo al sembrar baselines (intento ${attempts}): ${e.message}`);
+      await delay(2000); // Esperar 2s antes de reintentar
+    }
   }
 }
 
 async function cycle(telar) {
+  // Backoff: Si falló recientemente, saltar para no bloquear el ciclo
+  if (telar.nextRetry && Date.now() < telar.nextRetry) return;
+
+  // logger.debug(`[poller] cycle start for ${telar.telarKey}`);
   const ts = new Date();
   let snapshot = null;
 
@@ -68,20 +94,16 @@ async function cycle(telar) {
       snapshot = computeFromPulse({ telar, pulse, ts, pulsesPerRow: PPR });
     }
 
-    // Upsert cache
-    const serverState = await upsertCache(API_BASE, {
+    // Upsert cache via Persistence (Write-Behind)
+    const serverState = await persistence.process(API_BASE, {
       telcod: telar.telarKey,
-      // NO ENVIAR metadata de sesión para no sobrescribirla con null/0
-      // sescod: snapshot.sescod ?? null,
-      // tracod: snapshot.tracod ?? null,
-      // traraz: snapshot.traraz ?? null,
-      // turno_cod: snapshot.turno_cod ?? null,
-      // session_active: snapshot.session_active ?? 0,
       hil_act: snapshot.hil_act ?? 0,
       hil_turno: snapshot.hil_turno ?? 0,
-      // hil_start: snapshot.hil_start, // NO ENVIAR: Dejar que el servidor decida (preservar DB)
       velocidad: snapshot.velocidad ?? 0,
       last_offset: telar.hil_acum_offset || 0, // CRÍTICO: Para evitar sobrescribir un reset pendiente
+      // Pasamos campos extra para que persistence pueda detectar cambios críticos
+      // session_active: snapshot.session_active ?? 0, // REMOVED: Poller is not authoritative for session
+      counters_only: true, // NEW: Prevent overwriting session data in DB
     });
 
     // SYNC: Solo para CALC y cambios de sesión
@@ -99,7 +121,6 @@ async function cycle(telar) {
       }
 
       // 2. Sincronizar hil_start si difiere (CRÍTICO: así el poller se entera del reset)
-      // 2. Sincronizar hil_start si difiere (CRÍTICO: así el poller se entera del reset)
       if (srv.hil_start !== undefined && srv.hil_start !== snapshot.hil_start) {
         logger.debug(`[poller] SYNC: hil_start divergió (local=${snapshot.hil_start}, server=${srv.hil_start}). Actualizando local.`);
 
@@ -114,9 +135,6 @@ async function cycle(telar) {
         snapshot.hil_start = srv.hil_start;
 
         // CRÍTICO: Recalcular hil_turno inmediatamente con el nuevo offset
-        // para evitar que el siguiente ciclo envíe el valor viejo
-        // CRÍTICO: Recalcular hil_turno inmediatamente con el nuevo offset
-        // para evitar que el siguiente ciclo envíe el valor viejo
         // SOLO para CALC. Para PLC, hil_turno viene del PLC.
         if (snapshot.hil_act !== undefined && telar.mode !== 'PLC') {
           const newHilTurno = Math.max(0, snapshot.hil_act - srv.hil_start);
@@ -129,9 +147,12 @@ async function cycle(telar) {
 
       // 2b. Sync hil_act if server value differs (prevent reset)
       if (srv.hil_act !== undefined && srv.hil_act !== snapshot.hil_act) {
-        logger.debug(`[poller] SYNC: hil_act divergió (local=${snapshot.hil_act}, server=${srv.hil_act}). Actualizando local.`);
-        snapshot.hil_act = srv.hil_act;
-        dirty = true;
+        // Solo sincronizar si la diferencia es significativa o si es un reset
+        if (srv.hil_act !== snapshot.hil_act) {
+          logger.debug(`[poller] SYNC: hil_act divergió (local=${snapshot.hil_act}, server=${srv.hil_act}). Actualizando local.`);
+          snapshot.hil_act = srv.hil_act;
+          dirty = true;
+        }
       }
 
       // 3. SOLO PARA CALC: Detectar reset manual
@@ -170,7 +191,6 @@ async function cycle(telar) {
         snapshot.hil_start = srv.hil_start;
         snapshot.hil_act = srv.hil_act;
         snapshot.hil_turno = srv.hil_turno;
-        snapshot.hil_turno = srv.hil_turno;
         snapshot.set_value = srv.set_value;
       }
 
@@ -178,24 +198,15 @@ async function cycle(telar) {
       if (srv.hil_acum_offset !== undefined && srv.hil_acum_offset !== (telar.hil_acum_offset || 0)) {
         logger.debug(`[poller] SYNC: hil_acum_offset divergió (local=${telar.hil_acum_offset}, server=${srv.hil_acum_offset}). Actualizando local.`);
         telar.hil_acum_offset = srv.hil_acum_offset;
-        // No necesitamos hacer nada más, el siguiente ciclo de calc.reader.js o modbus.reader.js
-        // usará el nuevo offset automáticamente.
-        // Para CALC, calc.reader.js detectará el cambio en 'telar.hil_acum_offset' y ajustará hil_act.
-        // Para PLC, modbus.reader.js usará el nuevo offset.
       }
 
       // CRÍTICO: Inyectar metadata de sesión (Operario, Turno, Hora) desde el servidor al snapshot
-      // para que el Supervisor pueda mostrar quién está trabajando.
-
       if (srv.session_active) {
         snapshot.session_active = 1;
         snapshot.tracod = srv.tracod;
         snapshot.traraz = srv.traraz;
         snapshot.turno_cod = srv.turno_cod;
         snapshot.inicio_dt = srv.inicio_dt || srv.updated_at; // Fallback a updated_at si inicio_dt no viene
-
-        // DEBUG: Verificar qué estamos inyectando
-        logger.debug(`[poller] Metadata injected for ${telar.telarKey}: ${JSON.stringify({ tracod: srv.tracod, traraz: srv.traraz })}`);
       } else {
         snapshot.session_active = 0;
         snapshot.tracod = null;
@@ -222,8 +233,13 @@ async function cycle(telar) {
       ...snapshot,
     });
 
+    // Éxito: Limpiar backoff si existía
+    if (telar.nextRetry) telar.nextRetry = 0;
+
   } catch (err) {
     logger.warn(`[poller] fallo lectura telar=${telar.telarKey} (${telar.mode}): ${err.message}`);
+    // Backoff: Si falla, esperar 10s antes de reintentar este telar
+    telar.nextRetry = Date.now() + 10000;
   }
 }
 
@@ -231,44 +247,112 @@ async function main() {
   logger.info(`[poller] inicio → group=${GROUP || '(todos)'} period=${PERIOD_MS}ms conc=${CONC} PPR=${PPR}`);
   await initSockets(WS_URL);
 
-  let mapa = await loadMap(API_BASE, GROUP);
-  if (!mapa.length) {
-    logger.warn('[poller] mapa vacío, nada que leer');
-  } else {
-    logger.info(`[poller] mapa cargado: ${mapa.length} telares`);
+  let mapa = [];
+  while (true) {
+    try {
+      mapa = await loadMap(API_BASE, GROUP);
+      if (mapa.length > 0) {
+        logger.info(`[poller] mapa cargado: ${mapa.length} telares`);
+        break;
+      }
+      logger.warn('[poller] mapa vacío, reintentando en 5s...');
+    } catch (e) {
+      logger.warn(`[poller] fallo al cargar mapa inicial: ${e.message}. Reintentando en 5s...`);
+    }
+    await delay(5000);
   }
 
   await primeCalcBaselines();
 
+  let lastMapUpdate = Date.now();
+
+  // Heartbeat Stats
+  let cyclesCount = 0;
+  let cyclesTimeAccum = 0;
+  let lastHeartbeat = Date.now();
+
+  // Worker Pool Helper
+  const runPool = async (items, concurrency) => {
+    const queue = [...items];
+    const workers = [];
+
+    for (let i = 0; i < Math.min(concurrency, items.length); i++) {
+      workers.push((async () => {
+        while (queue.length > 0) {
+          const telar = queue.shift();
+          if (!telar || !telar.telarKey) continue;
+
+          // Jitter para evitar "thundering herd"
+          if (JITTER > 0) await delay(Math.random() * JITTER);
+
+          // Watchdog & Cycle
+          const startCycle = Date.now();
+          await cycle(telar);
+          const duration = Date.now() - startCycle;
+
+          // Watchdog: Log if cycle is too slow (> 500ms)
+          if (duration > 500) {
+            logger.warn(`[poller] SLOW CYCLE: ${telar.telarKey} took ${duration}ms`);
+          }
+        }
+      })());
+    }
+
+    await Promise.allSettled(workers);
+  };
+
   for (; ;) {
     const startLoop = Date.now();
 
-    // Reload map periodically (every 10s approx) to pick up config changes (like resets)
-    if (startLoop % 10000 < PERIOD_MS * 2) {
+    // Heartbeat (Every 60s)
+    if (Date.now() - lastHeartbeat > 60000) {
+      const avg = cyclesCount > 0 ? (cyclesTimeAccum / cyclesCount).toFixed(1) : 0;
+      logger.info(`[poller] HEARTBEAT: ${cyclesCount} loops/min. Avg loop time: ${avg}ms. Map size: ${mapa.length}`);
+      cyclesCount = 0;
+      cyclesTimeAccum = 0;
+      lastHeartbeat = Date.now();
+    }
+
+    // Reload map periodically (every 60s approx)
+    if (Date.now() - lastMapUpdate > 60_000) {
+      // logger.info('[poller] refreshing map...'); // Silenced
       try {
         const newMap = await loadMap(API_BASE, GROUP);
         if (newMap && newMap.length > 0) {
-          // Update mapa in place or replace. Replacing is safer for config updates.
-          // We need to preserve state if any, but PLC is stateless here.
           mapa = newMap;
-          // logger.debug('[poller] map refreshed');
+          // logger.info(`[poller] map refreshed (${mapa.length} telares)`); // Silenced
         }
       } catch (e) {
         logger.warn('[poller] map refresh failed:', e.message);
       }
+      lastMapUpdate = Date.now();
     }
 
-    for (const batch of chunk(mapa, CONC)) {
-      await Promise.allSettled(
-        batch.map(async (telar) => {
-          if (!telar || !telar.telarKey) return;
-          await delay(Math.random() * JITTER);
-          await cycle(telar);
-        })
-      );
+    // Periodic DB Sync (Sessions & Resets) - Every 5s
+    if (Date.now() - (global.lastDbSync || 0) > 5000) {
+      try {
+        const rec = await pullRecovery(API_BASE);
+        if (rec && Array.isArray(rec.data)) {
+          persistence.syncFromDB(rec.data);
+        }
+        global.lastDbSync = Date.now();
+      } catch (e) {
+        // Throttled log for DB sync failure
+        if (!global.lastDbError || Date.now() - global.lastDbError > 60000) {
+          logger.warn(`[poller] DB sync failed: ${e.message}`);
+          global.lastDbError = Date.now();
+        }
+      }
     }
+
+    // EJECUCIÓN CON WORKER POOL (Non-blocking)
+    // Esto evita que una máquina lenta bloquee a todo el lote.
+    await runPool(mapa, CONC);
 
     const spent = Date.now() - startLoop;
+    cyclesCount++;
+    cyclesTimeAccum += spent;
+
     const sleep = Math.max(0, PERIOD_MS - spent);
     if (sleep > 0) await delay(sleep);
   }

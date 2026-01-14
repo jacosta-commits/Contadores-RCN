@@ -102,6 +102,15 @@ const bus = {
       else supervisorNs.emitToAll('alerta', payload);
     },
   },
+  admin: {
+    /** Broadcast force-reload to all operator and supervisor clients */
+    broadcastReload() {
+      if (!ioRef) return;
+      ioRef.of('/telar').emit('force-reload');
+      ioRef.of('/supervisor').emit('force-reload');
+      logger.info('[admin] force-reload broadcast sent to all clients');
+    },
+  },
 };
 
 module.exports = {

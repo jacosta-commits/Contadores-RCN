@@ -78,6 +78,10 @@ app.get(['/supervisor', '/supervisor/'], (_req, res) => {
   res.sendFile(path.join(webRoot, 'supervisor', 'index.html'));
 });
 
+app.get(['/update', '/update/'], (_req, res) => {
+  res.sendFile(path.join(webRoot, 'update', 'index.html'));
+});
+
 // Raíz simple (opcional)
 app.get('/', (_req, res) => {
   res.status(200).json({
@@ -86,7 +90,7 @@ app.get('/', (_req, res) => {
     env: env.NODE_ENV || 'development',
     version: env.APP_VERSION || '1.0.0',
     api: '/api/v1',
-    web: ['/operator', '/supervisor'],
+    web: ['/operator', '/supervisor', '/update'],
   });
 });
 

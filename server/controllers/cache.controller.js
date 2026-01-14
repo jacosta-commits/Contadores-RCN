@@ -30,6 +30,7 @@ module.exports.upsert = async (req, res, next) => {
       hil_start,  // ← No default, para detectar si viene o no
       set_value,  // ← No default, para preservar valor DB si viene undefined
       velocidad = 0,
+      counters_only = false, // ← New flag
     } = req.body || {};
 
     if (!telcod) throw new HttpError(400, 'telcod requerido');
@@ -49,6 +50,7 @@ module.exports.upsert = async (req, res, next) => {
       hil_start, // Pasar tal cual, el DAL decide qué hacer
       set_value,
       velocidad,
+      counters_only, // ← Pass to service/DAL
     });
 
     send(res, data, 201);

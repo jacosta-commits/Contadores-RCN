@@ -18,5 +18,6 @@ router.use(require('./supervisor.routes'));
 router.use(require('./rrhh.routes'));
 router.use(require('./debug.routes'));
 router.use(require('./util.routes'));
+router.use('/admin', require('./admin'));
 
 module.exports = router;

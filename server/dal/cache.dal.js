@@ -18,6 +18,7 @@ async function upsert({
   velocidad = 0,
   hil_acum_offset, // Removed default 0
   last_offset,     // New argument for concurrency check
+  counters_only = false, // New flag for partial updates (Poller)
 }) {
   // Valores finales (si vienen undefined, se leerán de la DB)
   let finalSescod = sescod;
@@ -29,94 +30,46 @@ async function upsert({
   let finalSetValue = set_value;
 
   if (telcod === '0069') {
-    logger.info({ telcod, hil_start, set_value, session_active }, '[cache.dal] Incoming upsert');
+    logger.info({ telcod, hil_start, set_value, session_active, counters_only }, '[cache.dal] Incoming upsert');
   }
 
-  // Verificar si necesitamos leer de la DB (si falta algún campo crítico o de sesión)
-  const missingSession = (
-    finalSescod === undefined ||
-    finalTracod === undefined ||
-    finalTraraz === undefined ||
-    finalTurnoCod === undefined ||
-    finalSessionActive === undefined
-  );
-
-  const missingCounter = (
-    finalHilStart === null || finalHilStart === undefined ||
-    finalSetValue === null || finalSetValue === undefined
-  );
-
-  if (missingSession || missingCounter) {
-    const current = await query(`
-      SELECT sescod, tracod, traraz, turno_cod, session_active, hil_start, set_value 
-      FROM dbo.RCN_CONT_CACHE 
-      WHERE telcod = @telcod
-    `, r => r.input('telcod', sql.VarChar(10), telcod));
-
-    const fetched = current.recordset[0] || {};
-
-    if (finalSescod === undefined) finalSescod = fetched.sescod ?? null;
-    if (finalTracod === undefined) finalTracod = fetched.tracod ?? null;
-    if (finalTraraz === undefined) finalTraraz = fetched.traraz ?? null;
-    if (finalTurnoCod === undefined) finalTurnoCod = fetched.turno_cod ?? null;
-    if (finalSessionActive === undefined) finalSessionActive = fetched.session_active ?? 0;
-
-    if (finalHilStart === null || finalHilStart === undefined) {
-      finalHilStart = fetched.hil_start ?? 0;
-      // logger.debug({ telcod, final: finalHilStart }, '[cache.dal] Preserving hil_start');
-    }
-
-    if (finalSetValue === null || finalSetValue === undefined) {
-      finalSetValue = fetched.set_value ?? 0;
-      // logger.debug({ telcod, final: finalSetValue }, '[cache.dal] Preserving set_value');
-    }
-  }
-
-  // Si set_value es undefined, significa que el poller NO quiere modificarlo
-  // O si hil_act es 0, forzamos UPDATE directo para evitar que el SP bloquee el reset (protección de decremento)
-  if (set_value === null || set_value === undefined || hil_act === 0) {
-    // Construcción dinámica del UPDATE para manejar hil_acum_offset opcional y check de concurrencia
+  // Si es solo contadores, NO leemos de la DB ni tocamos sesión
+  if (counters_only) {
+    // Construcción dinámica del UPDATE solo para contadores
     let updateQ = `
       UPDATE dbo.RCN_CONT_CACHE
-      SET sescod = @sescod,
-          tracod = @tracod,
-          traraz = @traraz,
-          turno_cod = @turno_cod,
-          session_active = @session_active,
-          hil_turno = @hil_turno,
-          hil_start = @hil_start,
+      SET hil_turno = @hil_turno,
           velocidad = @velocidad,
           updated_at = GETDATE()
     `;
 
-    // Solo actualizar hil_acum_offset si se provee (Supervisor Reset)
+    // Solo actualizar hil_acum_offset si se provee
     if (hil_acum_offset !== undefined) {
       updateQ += `, hil_acum_offset = @hil_acum_offset`;
     }
 
-    // Actualizar hil_act CONDICIONALMENTE:
-    // Si se provee last_offset (desde Poller), solo actualizar si coincide con la DB.
-    // Si no coincide, significa que hubo un reset (offset cambió) y el dato del poller es viejo -> IGNORAR.
-    // Si no se provee last_offset (Supervisor), actualizar siempre.
+    // Actualizar hil_act CONDICIONALMENTE (concurrencia)
     if (last_offset !== undefined) {
       updateQ += `, hil_act = CASE WHEN hil_acum_offset = @last_offset THEN @hil_act ELSE hil_act END`;
     } else {
       updateQ += `, hil_act = @hil_act`;
     }
 
+    // Si hil_start viene definido, lo actualizamos (sync desde Poller)
+    if (hil_start !== undefined && hil_start !== null) {
+      updateQ += `, hil_start = @hil_start`;
+    }
+
     updateQ += ` WHERE telcod = @telcod`;
 
     await query(updateQ, req => {
       req.input('telcod', sql.VarChar(10), telcod);
-      req.input('sescod', sql.BigInt, finalSescod);
-      req.input('tracod', sql.VarChar(15), finalTracod);
-      req.input('traraz', sql.VarChar(120), finalTraraz);
-      req.input('turno_cod', sql.Char(1), finalTurnoCod);
-      req.input('session_active', sql.Bit, finalSessionActive ? 1 : 0);
       req.input('hil_act', sql.Int, hil_act);
       req.input('hil_turno', sql.Int, hil_turno);
-      req.input('hil_start', sql.Int, finalHilStart);
       req.input('velocidad', sql.Int, velocidad);
+      if (hil_start !== undefined && hil_start !== null) {
+        req.input('hil_start', sql.Int, hil_start);
+      }
       if (hil_acum_offset !== undefined) {
         req.input('hil_acum_offset', sql.Int, hil_acum_offset);
       }
@@ -124,35 +77,126 @@ async function upsert({
         req.input('last_offset', sql.Int, last_offset);
       }
     });
+
   } else {
-    // logger.debug({ telcod }, '[cache.dal] Using SP');
-    // Si set_value viene con valor, usamos el SP normal
-    await query(`
-      EXEC dbo.sp_rcn_cont_cache_upsert
-        @telcod=@p_telcod,
-        @sescod=@p_sescod,
-        @tracod=@p_tracod,
-        @traraz=@p_traraz,
-        @turno_cod=@p_turno_cod,
-        @session_active=@p_session_active,
-        @hil_act=@p_hil_act,
-        @hil_turno=@p_hil_turno,
-        @hil_start=@p_hil_start,
-        @set_value=@p_set_value,
-        @velocidad=@p_velocidad
-    `, req => {
-      req.input('p_telcod', sql.VarChar(10), telcod);
-      req.input('p_sescod', sql.BigInt, finalSescod);
-      req.input('p_tracod', sql.VarChar(15), finalTracod);
-      req.input('p_traraz', sql.VarChar(120), finalTraraz);
-      req.input('p_turno_cod', sql.Char(1), finalTurnoCod);
-      req.input('p_session_active', sql.Bit, finalSessionActive ? 1 : 0);
-      req.input('p_hil_act', sql.Int, hil_act);
-      req.input('p_hil_turno', sql.Int, hil_turno);
-      req.input('p_hil_start', sql.Int, finalHilStart);
-      req.input('p_set_value', sql.Int, finalSetValue);
-      req.input('p_velocidad', sql.Int, velocidad);
-    });
+    // LOGICA COMPLETA (Session + Counters)
+
+    // Verificar si necesitamos leer de la DB (si falta algún campo crítico o de sesión)
+    const missingSession = (
+      finalSescod === undefined ||
+      finalTracod === undefined ||
+      finalTraraz === undefined ||
+      finalTurnoCod === undefined ||
+      finalSessionActive === undefined
+    );
+
+    const missingCounter = (
+      finalHilStart === null || finalHilStart === undefined ||
+      finalSetValue === null || finalSetValue === undefined
+    );
+
+    if (missingSession || missingCounter) {
+      const current = await query(`
+          SELECT sescod, tracod, traraz, turno_cod, session_active, hil_start, set_value 
+          FROM dbo.RCN_CONT_CACHE 
+          WHERE telcod = @telcod
+        `, r => r.input('telcod', sql.VarChar(10), telcod));
+
+      const fetched = current.recordset[0] || {};
+
+      if (finalSescod === undefined) finalSescod = fetched.sescod ?? null;
+      if (finalTracod === undefined) finalTracod = fetched.tracod ?? null;
+      if (finalTraraz === undefined) finalTraraz = fetched.traraz ?? null;
+      if (finalTurnoCod === undefined) finalTurnoCod = fetched.turno_cod ?? null;
+      if (finalSessionActive === undefined) finalSessionActive = fetched.session_active ?? 0;
+
+      if (finalHilStart === null || finalHilStart === undefined) {
+        finalHilStart = fetched.hil_start ?? 0;
+      }
+
+      if (finalSetValue === null || finalSetValue === undefined) {
+        finalSetValue = fetched.set_value ?? 0;
+      }
+    }
+
+    // Si set_value es undefined, significa que el poller NO quiere modificarlo
+    // O si hil_act es 0, forzamos UPDATE directo para evitar que el SP bloquee el reset (protección de decremento)
+    if (set_value === null || set_value === undefined || hil_act === 0) {
+      // Construcción dinámica del UPDATE para manejar hil_acum_offset opcional y check de concurrencia
+      let updateQ = `
+          UPDATE dbo.RCN_CONT_CACHE
+          SET sescod = @sescod,
+              tracod = @tracod,
+              traraz = @traraz,
+              turno_cod = @turno_cod,
+              session_active = @session_active,
+              hil_turno = @hil_turno,
+              hil_start = @hil_start,
+              velocidad = @velocidad,
+              updated_at = GETDATE()
+        `;
+
+      // Solo actualizar hil_acum_offset si se provee (Supervisor Reset)
+      if (hil_acum_offset !== undefined) {
+        updateQ += `, hil_acum_offset = @hil_acum_offset`;
+      }
+
+      // Actualizar hil_act CONDICIONALMENTE:
+      if (last_offset !== undefined) {
+        updateQ += `, hil_act = CASE WHEN hil_acum_offset = @last_offset THEN @hil_act ELSE hil_act END`;
+      } else {
+        updateQ += `, hil_act = @hil_act`;
+      }
+
+      updateQ += ` WHERE telcod = @telcod`;
+
+      await query(updateQ, req => {
+        req.input('telcod', sql.VarChar(10), telcod);
+        req.input('sescod', sql.BigInt, finalSescod);
+        req.input('tracod', sql.VarChar(15), finalTracod);
+        req.input('traraz', sql.VarChar(120), finalTraraz);
+        req.input('turno_cod', sql.Char(1), finalTurnoCod);
+        req.input('session_active', sql.Bit, finalSessionActive ? 1 : 0);
+        req.input('hil_act', sql.Int, hil_act);
+        req.input('hil_turno', sql.Int, hil_turno);
+        req.input('hil_start', sql.Int, finalHilStart);
+        req.input('velocidad', sql.Int, velocidad);
+        if (hil_acum_offset !== undefined) {
+          req.input('hil_acum_offset', sql.Int, hil_acum_offset);
+        }
+        if (last_offset !== undefined) {
+          req.input('last_offset', sql.Int, last_offset);
+        }
+      });
+    } else {
+      // Si set_value viene con valor, usamos el SP normal
+      await query(`
+          EXEC dbo.sp_rcn_cont_cache_upsert
+            @telcod=@p_telcod,
+            @sescod=@p_sescod,
+            @tracod=@p_tracod,
+            @traraz=@p_traraz,
+            @turno_cod=@p_turno_cod,
+            @session_active=@p_session_active,
+            @hil_act=@p_hil_act,
+            @hil_turno=@p_hil_turno,
+            @hil_start=@p_hil_start,
+            @set_value=@p_set_value,
+            @velocidad=@p_velocidad
+        `, req => {
+        req.input('p_telcod', sql.VarChar(10), telcod);
+        req.input('p_sescod', sql.BigInt, finalSescod);
+        req.input('p_tracod', sql.VarChar(15), finalTracod);
+        req.input('p_traraz', sql.VarChar(120), finalTraraz);
+        req.input('p_turno_cod', sql.Char(1), finalTurnoCod);
+        req.input('p_session_active', sql.Bit, finalSessionActive ? 1 : 0);
+        req.input('p_hil_act', sql.Int, hil_act);
+        req.input('p_hil_turno', sql.Int, hil_turno);
+        req.input('p_hil_start', sql.Int, finalHilStart);
+        req.input('p_set_value', sql.Int, finalSetValue);
+        req.input('p_velocidad', sql.Int, velocidad);
+      });
+    }
   }
 
   // Leer directamente de la tabla en lugar de la vista para asegurar que set_value esté presente

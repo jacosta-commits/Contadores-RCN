@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Admin Update · Contadores RCN</title>
+    <meta name="description" content="Panel de administración para actualización remota de vistas" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0b1220" />
+
+    <link rel="stylesheet" href="/shared/css/tokens.css" />
+    <link rel="stylesheet" href="/shared/css/base.css" />
+    <link rel="stylesheet" href="/update/assets/css/main.css" />
+</head>
+
+<body>
+    <main class="admin-container">
+        <div class="admin-header">
+            <h1>🔄 Panel de Actualización</h1>
+            <p class="subtitle">Actualización remota de vistas Operator y Supervisor</p>
+        </div>
+
+        <div class="admin-content">
+            <div class="info-box">
+                <p>Presiona el botón para refrescar <strong>todas</strong> las tablets/browsers que tengan abiertas las
+                    vistas de operator o supervisor.</p>
+                <p class="warning">⚠️ Esto afectará a todos los dispositivos conectados.</p>
+            </div>
+
+            <button id="btnBroadcastReload" class="btn-reload">
+                🔄 Actualizar Todas las Vistas
+            </button>
+
+            <div id="status" class="status-message"></div>
+        </div>
+
+        <div class="admin-footer">
+            <p>RCN Contadores · Admin Panel</p>
+        </div>
+    </main>
+    <script src="/update/assets/js/app.js"></script>
+</body>
+
+</html>

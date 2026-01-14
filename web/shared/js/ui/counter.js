@@ -1,5 +1,6 @@
 // web/shared/js/ui/counter.js
 // Componente de contador (Estilo Contadores_02)
+import { tween } from '../util/tween.js';
 
 export function renderCounter({ idPrefix, title = '' } = {}) {
   const p = idPrefix || 'ctr';
@@ -41,9 +42,10 @@ export function renderCounter({ idPrefix, title = '' } = {}) {
 
 function fmt(n) {
   if (n === undefined || n === null) return '—';
-  const num = Number(n);
+  const num = parseInt(n, 10);
   if (Number.isNaN(num)) return String(n);
-  return num.toLocaleString('es-PE');
+  // Formato industrial: Mínimo 4 dígitos, sin comas (ej: 0123, 5547, 30861)
+  return String(num).padStart(4, '0');
 }
 
 export function patchCounter(idPrefix, data = {}) {
@@ -55,6 +57,14 @@ export function patchCounter(idPrefix, data = {}) {
     set: (data.set_value ?? data.set ?? data.hil_total ?? data.total),
   };
   Object.entries(map).forEach(([k, v]) => {
-    const el = qs(k); if (el) el.textContent = fmt(v);
+    const el = qs(k);
+    if (!el) return;
+
+    // Animar hturno y hact
+    if (k === 'hturno' || k === 'hact') {
+      tween(el, v, 150, fmt);
+    } else {
+      el.textContent = fmt(v);
+    }
   });
 }

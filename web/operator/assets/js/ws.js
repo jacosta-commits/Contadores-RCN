@@ -7,6 +7,7 @@
  */
 let socket = null;
 let _onState = () => { };
+let lastJoinedRooms = []; // Track rooms for reconnect
 
 /* Normaliza payloads: admite camelCase/underscore y diffs por telar */
 function normalizeOne(obj = {}) {
@@ -69,15 +70,31 @@ export function init({ onState = () => { } } = {}) {
       path: '/socket.io'
     });
 
-    socket.on('connect', () => console.debug('[ws] connected /telar', socket.id));
+    socket.on('connect', () => {
+      console.debug('[ws] connected /telar', socket.id);
+
+      // Re-join rooms on every connect (includes reconnects)
+      if (lastJoinedRooms.length > 0) {
+        console.warn('[ws] re-joining rooms after reconnect:', lastJoinedRooms);
+        socket.emit('rooms:join', { telcods: lastJoinedRooms });
+        socket.emit('join', lastJoinedRooms);
+      }
+    });
     socket.on('disconnect', (r) => console.debug('[ws] disconnected /telar', r));
     socket.on('error', (e) => console.warn('[ws] error /telar', e));
 
     // Eventos esperados desde el servidor:
-    socket.on('state', handleIncoming);     // unitario
+    socket.on('state', handleIncoming);     //unitario
     socket.on('broadcast', handleIncoming); // compat
     socket.on('update', handleIncoming);    // diffs (compat con server raíz)
     socket.on('snapshot', handleIncoming);  // opcional al conectar
+    socket.on('state.push', handleIncoming); // FIX: Listen for direct push events
+
+    // Listen for forced reload from admin
+    socket.on('force-reload', () => {
+      console.warn('[ws] force-reload received - reloading page...');
+      setTimeout(() => window.location.reload(), 500);
+    });
   } catch (e) {
     console.warn('[ws] init failed /telar:', e);
   }
@@ -87,6 +104,7 @@ export function init({ onState = () => { } } = {}) {
 
 export function joinRooms(telcods = []) {
   const arr = Array.isArray(telcods) ? telcods : [telcods];
+  lastJoinedRooms = arr; // Store for reconnect
   try {
     socket?.emit?.('rooms:join', { telcods: arr });
     socket?.emit?.('join', arr);           // compat

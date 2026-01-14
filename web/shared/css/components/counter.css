@@ -1,6 +1,14 @@
 /* web/shared/css/components/counter.css
    Migrated from Contadores_02/public/operario/css/contadores.css AND injected CSS from contadores.js */
 
+@font-face {
+  font-family: 'Digital7';
+  src: url('../fonts/digital-7.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --card-bg: #0e141d;
   --card-bg2: #0a1018;
@@ -100,7 +108,7 @@
 
 /* Valor */
 .row-value {
-  font-family: 'Digital7', monospace;
+  font-family: 'Digital7', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
   text-align: right;
   white-space: nowrap;
   overflow: hidden;

@@ -26,7 +26,7 @@ async function crear({ sescod, telcod, categoria = null, mensaje = null }) {
   // Mapeo de destinatarios (Copied from App_RCN_web_con_PLC)
   const CHAT_MAP = {
     'MC': ['7611303895', '7431104838', '7916899127', '7819533784'], // Mecánico / Calidad
-    'M': ['7611303895', '7431104838'],                             // Mecánico
+    'M': ['7611303895', '7431104838', '8495855131'],                             // Mecánico
     'S': ['7968380850', '7611303895'],                             // Supervisor / Auxiliar
     'E': ['7611303895', '7874886232'],                             // Electricista
     'Q': ['7611303895', '7916899127', '7819533784'],               // Calidad

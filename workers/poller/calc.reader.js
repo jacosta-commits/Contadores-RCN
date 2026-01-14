@@ -92,17 +92,14 @@ function computeFromPulse({ telar, pulse, ts, pulsesPerRow = 1 }) {
   // Esto cuenta PULSO POR PULSO, no por hileras
   const dPulses = dp;  // delta de pulsos, sin división
 
-  // Velocidad (pulsos/minuto)
-  const dt = (now - (s.lastTs || now)) / 1000;
-  if (dt > 0 && dPulses >= 0) {
-    const vel_pps = dPulses / dt;   // pulses per second
-    s.velocidad = Math.round(vel_pps * 60); // pulses per minute
-  }
-  s.lastTs = now;
-
   // Acumulados en memoria (SIN división, igual que tu servidor viejo)
   s.hil_act += dPulses;
   s.hil_turno += dPulses; // RESTAURADO: Acumular delta independientemente
+
+  // VELOCIDAD: CALC no tiene sensor de velocidad física
+  // Anteriormente se calculaba artificialmente, pero esto no es correcto
+  // Los contadores CALC ahora siempre reportan velocidad = 0
+  s.velocidad = 0;
 
   // NEW: Ajuste por cambio de hil_acum_offset (Reset desde Supervisor)
   const currentOffset = telar.hil_acum_offset || 0;
@@ -130,7 +127,7 @@ function computeFromPulse({ telar, pulse, ts, pulsesPerRow = 1 }) {
     hil_turno: s.hil_turno,   // SIN Math.floor
     hil_start: s.hil_start,   // SIN Math.floor
     set_value: s.set_value,   // Devolver valor en memoria (se actualiza por sync)
-    velocidad: s.velocidad,
+    velocidad: 0,             // CALC no tiene sensor de velocidad
     session_active: s.session_active,
   };
 }
