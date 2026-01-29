@@ -11,7 +11,7 @@ const CATS = [
   { k: 'S', label: 'Supervisor / Auxiliar' },
   { k: 'E', label: 'Electricista' },
   { k: 'Q', label: 'Calidad' },
-  // { k: 'G', label: 'Gancho Inferior' }, // Removed per user request
+  { k: 'G', label: 'Gancho Inferior' },
 ];
 
 export function openCallModal({ telcod, sescod }) {

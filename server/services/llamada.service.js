@@ -73,7 +73,19 @@ async function crear({ sescod, telcod, categoria = null, mensaje = null }) {
     const catLabel = LABELS[cat] || cat || 'General';
     const recipients = CHAT_MAP[cat] || CHAT_MAP['DEFAULT'];
 
-    const msg = `🚨 <b>LLAMADA TELAR ${telcod}</b>\n\n` +
+    // Buscar nombre bonito del telar
+    let telDisplayName = telcod;
+    try {
+      const requireTelares = require('../dal/telares.dal');
+      const tInfo = await requireTelares.getByTelcod(telcod);
+      if (tInfo && tInfo.telnom) {
+        telDisplayName = tInfo.telnom;
+      }
+    } catch (e) {
+      logger.warn('[llamada.service] error fetching telnom:', e.message);
+    }
+
+    const msg = `🚨 <b>LLAMADA ${telDisplayName}</b>\n\n` +
       `<b>Motivo:</b> ${catLabel}\n` +
       (mensaje ? `<b>Nota:</b> ${mensaje}\n` : '') +
       `<i>Sesión: ${sescod}</i>`;
