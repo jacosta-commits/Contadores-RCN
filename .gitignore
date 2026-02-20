@@ -7,3 +7,9 @@ coverage/
 
 # Poller live state
 workers/poller/state.json
+
+# Logs and temp files
+*.log
+temp_check.txt
+check_cache.js
+run_migration*.js
