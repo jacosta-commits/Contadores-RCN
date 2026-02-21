@@ -10,6 +10,7 @@ workers/poller/state.json
 
 # Logs and temp files
 *.log
+*.bak
 temp_check.txt
 check_cache.js
 run_migration*.js
