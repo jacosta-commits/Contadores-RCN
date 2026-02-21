@@ -1,6 +1,5 @@
 // web/shared/js/ui/counter.js
 // Componente de contador (Estilo Contadores_02)
-import { tween } from '../util/tween.js';
 
 export function renderCounter({ idPrefix, title = '' } = {}) {
   const p = idPrefix || 'ctr';
@@ -60,11 +59,7 @@ export function patchCounter(idPrefix, data = {}) {
     const el = qs(k);
     if (!el) return;
 
-    // Animar hturno y hact
-    if (k === 'hturno' || k === 'hact') {
-      tween(el, v, 150, fmt);
-    } else {
-      el.textContent = fmt(v);
-    }
+    // Direct assignment — no tween animation (prevents jitter and interpolation on reset)
+    el.textContent = fmt(v);
   });
 }
