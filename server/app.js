@@ -61,10 +61,20 @@ app.use((req, res, next) => {
 /* ========== Static web: operator/supervisor ========== */
 const webRoot = path.join(__dirname, '..', 'web');
 
+// No-cache for JS files (prevents stale code from being served after deploys)
+app.use((req, res, next) => {
+  if (req.path.endsWith('.js')) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
+  next();
+});
+
 // Archivos estáticos compartidos (css/js/assets)
 app.use('/', express.static(webRoot, {
   index: false,
-  redirect: false,            // ⬅️ evita redirect /operator → /operator/
+  redirect: false,
   maxAge: env.STATIC_MAXAGE || '1h',
   etag: true,
 }));
