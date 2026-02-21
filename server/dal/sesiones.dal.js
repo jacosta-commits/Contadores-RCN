@@ -77,9 +77,25 @@ async function setActiveJti({ sescod, jti }) {
   return rs.recordset[0] || null;
 }
 
+/** Obtén sesiones activas que superaron su tiempo límite (9h para turnos 1,2,3; 13h para 4,5) */
+async function getExpiradas() {
+  const rs = await query(`
+    SELECT sescod, tracod, turno_cod, inicio
+    FROM dbo.RCN_CONT_SESION
+    WHERE activo = 1 
+      AND (
+        (turno_cod IN ('1', '2', '3') AND SYSDATETIME() >= DATEADD(hour, 9, inicio))
+        OR
+        (turno_cod IN ('4', '5') AND SYSDATETIME() >= DATEADD(hour, 13, inicio))
+      )
+  `);
+  return rs.recordset || [];
+}
+
 module.exports = {
   abrir,
   cerrar,
   getById,
   setActiveJti,
+  getExpiradas,
 };

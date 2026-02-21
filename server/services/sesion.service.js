@@ -83,9 +83,25 @@ async function getById(sescod) {
   return sesionesDAL.getById(sescod);
 }
 
+/** Cierra automáticamente sesiones que hayan superado su tiempo límite */
+async function cerrarExpiradas() {
+  try {
+    const expiradas = await sesionesDAL.getExpiradas();
+    if (expiradas.length > 0) {
+      logger.info(`[cerrarExpiradas] Encontradas ${expiradas.length} sesiones expiradas para cerrar.`);
+      for (const sesion of expiradas) {
+        logger.info({ sescod: sesion.sescod, tracod: sesion.tracod }, '[cerrarExpiradas] Cerrando sesión automáticamente por tiempo');
+        await cerrar({ sescod: sesion.sescod });
+      }
+    }
+  } catch (err) {
+    logger.error({ err }, '[cerrarExpiradas] Error al procesar sesiones expiradas');
+  }
+}
+
 /** (opcional) fija JTI activo si luego manejas JWT por dispositivo */
 async function setActiveJti({ sescod, jti }) {
   return sesionesDAL.setActiveJti({ sescod, jti });
 }
 
-module.exports = { abrir, cerrar, getById, setActiveJti };
+module.exports = { abrir, cerrar, getById, setActiveJti, cerrarExpiradas };

@@ -181,15 +181,33 @@ export function setupCardEvents(telcod) {
     };
   }
 
-  // Reset (Doble Click en Acumulado)
+  // Reset (Doble Click o Doble Tap en Acumulado)
   const rowAct = document.getElementById(`row-act-${telcod}`);
   if (rowAct) {
-    rowAct.ondblclick = async () => {
+    const handleResetAction = async () => {
       if (confirm(`¿Resetear acumulado del Telar ${telcod}?`)) {
         try { await api.telares.reset(telcod); }
         catch (e) { alert(e.message); }
       }
     };
+
+    rowAct.ondblclick = (e) => {
+      e.preventDefault();
+      handleResetAction();
+    };
+
+    // Soporte para doble-tap en móviles
+    let lastTap = 0;
+    rowAct.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTap < 400) {
+        e.preventDefault();
+        handleResetAction();
+        lastTap = 0;
+      } else {
+        lastTap = now;
+      }
+    });
   }
 
   // Set Total: REMOVIDO de Supervisor — ahora solo desde Operator

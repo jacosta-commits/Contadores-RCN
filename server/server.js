@@ -142,6 +142,14 @@ async function start() {
     // Opcional: intenta apagado ordenado
     setTimeout(() => process.exit(1), 250);
   });
+
+  // Tarea Automática: Cierre de Sesiones Expiradas (cada 1 minuto)
+  const sesionService = require('./services/sesion.service');
+  setInterval(() => {
+    sesionService.cerrarExpiradas().catch(e => {
+      logger.error('[sys] Error en tarea automática de cierre de sesiones:', e);
+    });
+  }, 60 * 1000); // 1 minuto
 }
 
 // Ejecuta
