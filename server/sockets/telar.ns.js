@@ -8,7 +8,7 @@ const llamadaSvc = require('../services/llamada.service');
 const checklistSvc = require('../services/checklist.service');
 const lecturaSvc = require('../services/lectura.service');
 const cacheSvc = require('../services/cache.service');
-const persistence = require('../../workers/poller/persistence'); // Acceso directo a memoria del Poller
+const registry = require('../../workers/poller/telar-registry'); // OOP registry for initial snapshots
 
 const NS = '/telar';
 const roomOf = (telcod) => `telar:${String(telcod).trim()}`;
@@ -60,15 +60,13 @@ async function joinMany(socket, telcods, ack) {
 
     // Snapshot inicial (OPTIMIZADO: Memoria -> DB)
     try {
-      const memState = persistence.getState();
       const dbNeeded = [];
-
       for (const t of list) {
-        if (memState[t]) {
-          // Si está en memoria, enviar INMEDIATAMENTE (0ms latency)
-          socket.emit('snapshot', { telcod: t, ...memState[t] });
+        const counter = registry.counters.get(t);
+        if (counter) {
+          // In-memory → send immediately (0ms latency)
+          socket.emit('snapshot', { telcod: t, ...counter.toJSON() });
         } else {
-          // Si no, marcar para buscar en DB
           dbNeeded.push(t);
         }
       }
