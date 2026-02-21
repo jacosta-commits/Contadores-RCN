@@ -2,6 +2,7 @@
 
 const logger = require('../lib/logger').child({ mod: 'util.service' });
 const cacheDAL = require('../dal/cache.dal');
+const bridge = require('../lib/poller-bridge');
 
 /**
  * Resetea el contador acumulado (hil_act) de un telar.
@@ -28,7 +29,12 @@ async function resetCounter(telcod) {
     // 1. Emitir cambio por WS INMEDIATAMENTE (Optimistic UI)
     try {
         const { bus } = require('../sockets');
-        bus.telar.state(telcod, { telcod, hil_act: 0 });
+        bus.telar.state(telcod, {
+            telcod,
+            hil_act: 0,
+            hil_turno: currentCache.hil_turno ?? 0,  // PRESERVE hil_turno in UI
+            velocidad: currentCache.velocidad ?? 0,
+        });
     } catch (e) {
         logger.warn({ err: e.message }, 'Error emitiendo WS en resetCounter');
     }
@@ -63,6 +69,9 @@ async function resetCounter(telcod) {
             // No tocamos hil_acum_offset
         });
 
+        // Notify poller instantly
+        bridge.emit('counter.reset', { telcod, hil_acum_offset: 0, mode: 'PLC' });
+
         return { telcod, hil_act: 0, mode: 'PLC' };
 
     } else {
@@ -77,14 +86,18 @@ async function resetCounter(telcod) {
         // 2. Actualizar offset persistente en TELAR
         await telaresDAL.updateAcumOffset(telcod, newOffset);
 
-        // 3. Actualizar visual en CACHE (opcional, el poller lo corregirá, pero para feedback inmediato)
-        // No pasamos ...currentCache ni set_value para forzar el uso del UPDATE directo en cache.dal.js
-        // y así poder actualizar hil_acum_offset (que el SP no soporta aún).
+        // 3. Actualizar visual en CACHE — use counters_only to NOT touch hil_turno
         await cacheDAL.upsert({
             telcod,
             hil_act: 0,
-            hil_acum_offset: newOffset
+            hil_turno: currentCache.hil_turno ?? 0,  // PRESERVE hil_turno
+            velocidad: currentCache.velocidad ?? 0,
+            hil_acum_offset: newOffset,
+            counters_only: true,
         });
+
+        // Notify poller instantly
+        bridge.emit('counter.reset', { telcod, hil_acum_offset: newOffset, mode: 'CALC' });
 
         logger.info({ telcod, newOffset }, 'Contador HIL. ACUM reseteado (nuevo offset)');
         return { telcod, hil_act: 0, hil_acum_offset: newOffset, mode: 'CALC' };

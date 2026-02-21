@@ -53,6 +53,11 @@ export function render(container) {
     patchByTelar(t, vals);
   });
 
+  // Wire SET double-click/double-tap on each telar's SET row
+  [left, right].filter(Boolean).forEach(t => {
+    wireSetEvent(t);
+  });
+
   refreshHeader();
   return root;
 }
@@ -152,4 +157,124 @@ function refreshHeader() {
   if (cod) cod.textContent = store.session?.tracod ?? '—';
   if (name) name.textContent = store.session?.traraz ?? '—';
   if (turno) turno.textContent = store.session?.turno_cod ?? '—';
+}
+
+/* ===== SET con doble-tap + contraseña ===== */
+
+const SET_PASSWORD = '2475';
+
+function wireSetEvent(telcod) {
+  const p = idPrefixFor(telcod);
+  const setEl = document.getElementById(`${p}-set`);
+  if (!setEl) return;
+
+  // Find the .row parent for better tap target
+  const rowEl = setEl.closest('.row');
+  const target = rowEl || setEl;
+
+  target.style.cursor = 'pointer';
+
+  target.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    handleSetTap(telcod);
+  });
+
+  // Double-tap support for mobile (touchend)
+  let lastTap = 0;
+  target.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTap < 400) {
+      e.preventDefault();
+      handleSetTap(telcod);
+      lastTap = 0;
+    } else {
+      lastTap = now;
+    }
+  });
+}
+
+async function handleSetTap(telcod) {
+  // Step 1: Ask for password
+  const pwd = await showInputModal('🔒 Contraseña requerida', 'Ingrese la contraseña para modificar el SET:', '', 'password');
+  if (pwd === null) return; // cancelled
+
+  if (pwd !== SET_PASSWORD) {
+    showAlertModal('⚠️ Acceso denegado', 'Contraseña incorrecta. No tiene permiso para modificar el SET.');
+    return;
+  }
+
+  // Step 2: Ask for new value
+  const val = await showInputModal('📝 Nuevo SET', `Ingrese el nuevo valor de SET para el telar:`, '', 'number');
+  if (val === null || val === '') return;
+
+  const num = parseInt(val, 10);
+  if (isNaN(num) || num < 0) {
+    showAlertModal('⚠️ Valor inválido', 'El valor debe ser un número positivo.');
+    return;
+  }
+
+  try {
+    await api.telares.setTotal(telcod, num);
+    showAlertModal('✅ SET actualizado', `SET del telar actualizado a ${num}.`);
+  } catch (e) {
+    showAlertModal('❌ Error', `No se pudo actualizar: ${e.message}`);
+  }
+}
+
+/* ===== Mini Modals (inline, no dependency) ===== */
+
+function showAlertModal(title, message) {
+  return new Promise((resolve) => {
+    removeModal();
+    const overlay = document.createElement('div');
+    overlay.id = 'set-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+      <div style="background:#1a1f2e;border:1px solid #334155;border-radius:16px;padding:24px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+        <div style="font-size:1.1rem;font-weight:700;color:#e2e8f0;margin-bottom:12px;">${title}</div>
+        <div style="font-size:.95rem;color:#94a3b8;margin-bottom:20px;">${message}</div>
+        <button id="set-modal-ok" style="background:#3b82f6;color:white;border:none;border-radius:10px;padding:10px 32px;font-size:1rem;font-weight:600;cursor:pointer;">OK</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#set-modal-ok').onclick = () => { removeModal(); resolve(); };
+    overlay.onclick = (e) => { if (e.target === overlay) { removeModal(); resolve(); } };
+  });
+}
+
+function showInputModal(title, message, defaultVal = '', inputType = 'text') {
+  return new Promise((resolve) => {
+    removeModal();
+    const overlay = document.createElement('div');
+    overlay.id = 'set-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+      <div style="background:#1a1f2e;border:1px solid #334155;border-radius:16px;padding:24px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+        <div style="font-size:1.1rem;font-weight:700;color:#e2e8f0;margin-bottom:8px;">${title}</div>
+        <div style="font-size:.9rem;color:#94a3b8;margin-bottom:16px;">${message}</div>
+        <input id="set-modal-input" type="${inputType}" value="${defaultVal}" 
+          style="width:80%;padding:10px 14px;font-size:1.1rem;text-align:center;background:#0f172a;border:1px solid #475569;border-radius:10px;color:#e2e8f0;outline:none;"
+          inputmode="${inputType === 'number' ? 'numeric' : 'text'}"
+          autocomplete="off" />
+        <div style="margin-top:18px;display:flex;gap:12px;justify-content:center;">
+          <button id="set-modal-cancel" style="background:#334155;color:#94a3b8;border:none;border-radius:10px;padding:10px 24px;font-size:.95rem;cursor:pointer;">Cancelar</button>
+          <button id="set-modal-confirm" style="background:#3b82f6;color:white;border:none;border-radius:10px;padding:10px 24px;font-size:.95rem;font-weight:600;cursor:pointer;">Confirmar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#set-modal-input');
+    setTimeout(() => input.focus(), 100);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { removeModal(); resolve(input.value); }
+      if (e.key === 'Escape') { removeModal(); resolve(null); }
+    });
+    overlay.querySelector('#set-modal-cancel').onclick = () => { removeModal(); resolve(null); };
+    overlay.querySelector('#set-modal-confirm').onclick = () => { removeModal(); resolve(input.value); };
+  });
+}
+
+function removeModal() {
+  const old = document.getElementById('set-modal-overlay');
+  if (old) old.remove();
 }

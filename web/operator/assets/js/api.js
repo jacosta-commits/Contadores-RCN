@@ -57,6 +57,9 @@ export const api = {
       return fx(`${API}/telares?${q.toString()}`);
     },
     get: (telcod) => fx(`${API}/telares/${encodeURIComponent(telcod)}`),
+    // Set total de lote (hilo)
+    setTotal: (telcod, hilTotal) =>
+      fx(`${API}/set/${encodeURIComponent(telcod)}`, { method: 'PUT', body: { set_value: hilTotal } }),
   },
 
   // Sesión-Telar (azúcar /sesiones/:sescod/telares/:telcod)

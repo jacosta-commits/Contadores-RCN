@@ -193,17 +193,7 @@ export function setupCardEvents(telcod) {
     };
   }
 
-  // Set Total (Doble Click en Set)
-  const rowSet = document.getElementById(`row-set-${telcod}`);
-  if (rowSet) {
-    rowSet.ondblclick = async () => {
-      const val = prompt(`Nuevo SET para Telar ${telcod}:`);
-      if (val) {
-        try { await api.telares.setTotal(telcod, Number(val)); }
-        catch (e) { alert(e.message); }
-      }
-    };
-  }
+  // Set Total: REMOVIDO de Supervisor — ahora solo desde Operator
 }
 
 function renderParticipantesTable(container, data) {

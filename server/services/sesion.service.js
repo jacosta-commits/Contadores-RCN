@@ -25,11 +25,12 @@ async function cerrar({ sescod, fin = null }) {
   const activos = await stDAL.listActivos({ sescod });
   logger.info({ sescod, activos }, `[cerrar] Telares activos: ${activos.length}`);
 
-  // 2. Para cada telar activo, leer su estado actual del cache
+  // 2. Para cada telar activo, leer su estado actual del cache (EN PARALELO)
   const cacheDAL = require('../dal/cache.dal'); // Lazy require
   const lecturaSvc = require('./lectura.service'); // Lazy require para evitar ciclos si hubiera
+  const sesionTelarSvc = require('./sesion-telar.service');
 
-  for (const t of activos) {
+  await Promise.all(activos.map(async (t) => {
     try {
       // Leer estado actual del telar desde el cache
       const cacheState = await cacheDAL.getByTelcod(t.telcod);
@@ -53,15 +54,13 @@ async function cerrar({ sescod, fin = null }) {
       }
 
       // IMPORTANTE: Desasignar el telar (marcar activo=0 en RCN_CONT_SESION_TELAR)
-      // Usamos el servicio para que dispare la lógica de reset de hil_turno y WS
-      const sesionTelarSvc = require('./sesion-telar.service');
       await sesionTelarSvc.quitar({ sescod, telcod: t.telcod });
       logger.info({ telcod: t.telcod }, '[cerrar] Telar desasignado y turno reseteado');
 
     } catch (e) {
       logger.warn({ e, telcod: t.telcod }, 'Error cerrando telar al cerrar sesión');
     }
-  }
+  }));
 
   // 2.5 Cancelar llamadas pendientes (tickets abiertos)
   try {

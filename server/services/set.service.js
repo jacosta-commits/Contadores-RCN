@@ -2,6 +2,7 @@
 
 const logger = require('../lib/logger').child({ mod: 'set.service' });
 const cacheDAL = require('../dal/cache.dal');
+const bridge = require('../lib/poller-bridge');
 
 /**
  * Actualiza el set_value (meta de lote) para un telar.
@@ -53,6 +54,9 @@ async function updateSet({ telcod, set_value }) {
     } catch (e) {
         logger.warn({ err: e.message }, 'Error emitiendo WS en updateSet');
     }
+
+    // Notify poller instantly via bridge (prevents bounce)
+    bridge.emit('set.updated', { telcod, set_value: val });
 
     return { telcod, set_value: val };
 }

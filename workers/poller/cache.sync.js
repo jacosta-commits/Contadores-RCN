@@ -1,45 +1,32 @@
 'use strict';
 
 /**
- * Sincroniza caché para recuperación (VW_RCN_CONT_RECOVERY)
- * API:
- *  - GET  /api/v1/cache/recovery
- *  - PUT  /api/v1/cache (body en cache.controller.js)
+ * cache.sync.js — Direct DAL access for cache sync.
+ * The poller runs in-process, so we call DAL/service directly
+ * instead of HTTP fetch to localhost.
  */
 
-const _fetch = (...args) =>
-  (global.fetch ? global.fetch(...args) : import('node-fetch').then(({ default: f }) => f(...args)));
+const cacheDAL = require('../../server/dal/cache.dal');
+const cacheSvc = require('../../server/services/cache.service');
+const logger = require('../../server/lib/logger');
 
-async function pullRecovery(API_BASE) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
+async function pullRecovery(_API_BASE) {
   try {
-    const res = await _fetch(`${API_BASE}/cache/recovery`, { signal: controller.signal });
-    if (!res.ok) throw new Error(`recovery HTTP ${res.status}`);
-    const json = await res.json();
-    return json?.data || [];
-  } finally {
-    clearTimeout(timeout);
+    const data = await cacheDAL.getRecovery();
+    return data || [];
+  } catch (e) {
+    logger.warn(`[cache.sync] pullRecovery direct failed: ${e.message}`);
+    throw e;
   }
 }
 
-async function upsertCache(API_BASE, body) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
+async function upsertCache(_API_BASE, body) {
   try {
-    const res = await _fetch(`${API_BASE}/cache`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      const txt = await res.text().catch(() => '');
-      throw new Error(`cache upsert HTTP ${res.status} ${txt}`);
-    }
-    return res.json().catch(() => ({}));
-  } finally {
-    clearTimeout(timeout);
+    const data = await cacheSvc.upsert(body);
+    return { data };
+  } catch (e) {
+    logger.warn(`[cache.sync] upsertCache direct failed: ${e.message}`);
+    throw e;
   }
 }
 

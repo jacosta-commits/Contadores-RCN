@@ -18,6 +18,7 @@ const { seedFromCache, computeFromPulse } = require('./calc.reader');
 const { upsertCache, pullRecovery } = require('./cache.sync');
 const { initSockets, emitTelarState, emitSupervisorState } = require('./broadcast');
 const persistence = require('./persistence');
+const bridge = require('../../server/lib/poller-bridge');
 
 const API_BASE = env.API_BASE || `http://127.0.0.1:${env.PORT || 8080}/api/v1`;
 const WS_URL = env.WS_URL || `http://${env.HOST || '127.0.0.1'}:${env.PORT || 8080}`;
@@ -145,15 +146,9 @@ async function cycle(telar) {
         }
       }
 
-      // 2b. Sync hil_act if server value differs (prevent reset)
-      if (srv.hil_act !== undefined && srv.hil_act !== snapshot.hil_act) {
-        // Solo sincronizar si la diferencia es significativa o si es un reset
-        if (srv.hil_act !== snapshot.hil_act) {
-          logger.debug(`[poller] SYNC: hil_act divergió (local=${snapshot.hil_act}, server=${srv.hil_act}). Actualizando local.`);
-          snapshot.hil_act = srv.hil_act;
-          dirty = true;
-        }
-      }
+      // 2b. hil_act: Poller is AUTHORITATIVE for counter values.
+      // Do NOT overwrite local hil_act with server value — it creates feedback loops.
+      // The server is a write-behind store; local delta computation is the source of truth.
 
       // 3. SOLO PARA CALC: Detectar reset manual
       if (telar.mode === 'CALC' && srv.hil_act === 0 && snapshot.hil_act > 0) {
@@ -178,10 +173,9 @@ async function cycle(telar) {
       }
 
       if (dirty) {
+        // Only sync session metadata and hil_start — NOT hil_act/hil_turno (poller is authoritative)
         seedFromCache({
           telcod: telar.telarKey,
-          hil_act: srv.hil_act,
-          hil_turno: srv.hil_turno,
           hil_start: srv.hil_start,
           session_active: srv.session_active,
           set_value: srv.set_value,
@@ -189,9 +183,8 @@ async function cycle(telar) {
 
         snapshot.session_active = srv.session_active;
         snapshot.hil_start = srv.hil_start;
-        snapshot.hil_act = srv.hil_act;
-        snapshot.hil_turno = srv.hil_turno;
         snapshot.set_value = srv.set_value;
+        // Do NOT override: snapshot.hil_act, snapshot.hil_turno
       }
 
       // 5. Sincronizar hil_acum_offset (CRÍTICO para reset instantáneo)
@@ -264,6 +257,15 @@ async function main() {
 
   await primeCalcBaselines();
 
+  // Bridge listener: update in-memory telar map instantly on reset
+  bridge.on('counter.reset', ({ telcod, hil_acum_offset }) => {
+    const t = mapa.find(m => m.telarKey === telcod);
+    if (t) {
+      t.hil_acum_offset = hil_acum_offset;
+      logger.info(`[poller] BRIDGE: Updated map hil_acum_offset for ${telcod} to ${hil_acum_offset}`);
+    }
+  });
+
   let lastMapUpdate = Date.now();
 
   // Heartbeat Stats
@@ -328,12 +330,14 @@ async function main() {
       lastMapUpdate = Date.now();
     }
 
-    // Periodic DB Sync (Sessions & Resets) - Every 5s
-    if (Date.now() - (global.lastDbSync || 0) > 5000) {
+    // Periodic DB Sync (Sessions & Resets) - Every 3s (safety net; bridge handles instant updates)
+    if (Date.now() - (global.lastDbSync || 0) > 3000) {
       try {
         const rec = await pullRecovery(API_BASE);
-        if (rec && Array.isArray(rec.data)) {
-          persistence.syncFromDB(rec.data);
+        // Direct DAL returns array; HTTP used to return {data:[...]}
+        const items = Array.isArray(rec) ? rec : (rec?.data || []);
+        if (items.length > 0) {
+          persistence.syncFromDB(items);
         }
         global.lastDbSync = Date.now();
       } catch (e) {

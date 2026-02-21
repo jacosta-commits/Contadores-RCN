@@ -3,6 +3,7 @@
 const { HttpError } = require('../lib/errors');
 const logger = require('../lib/logger').child({ mod: 'sesion-telar.service' });
 const stDAL = require('../dal/sesion-telar.dal');
+const bridge = require('../lib/poller-bridge');
 
 /** Asigna telar a sesión (idempotente; índices/trigger validan reglas) */
 async function asignar({ sescod, telcod }) {
@@ -70,6 +71,20 @@ async function asignar({ sescod, telcod }) {
     } catch (e) {
       logger.warn({ err: e.message }, 'Error emitiendo WS en asignar telar');
     }
+
+    // Notify poller instantly
+    bridge.emit('session.opened', {
+      telcod,
+      sescod,
+      tracod: sesionInfo?.tracod ?? null,
+      traraz: sesionInfo?.traraz ?? null,
+      turno_cod: sesionInfo?.turno_cod ?? null,
+      session_active: 1,
+      hil_act: cacheState?.hil_act ?? 0,
+      hil_turno: cacheState?.hil_turno ?? 0,
+      hil_start: cacheState?.hil_start ?? 0,
+      set_value: cacheState?.set_value ?? 0,
+    });
 
     logger.info({ sescod, telcod }, 'Telar asignado con snapshot INICIO_TURNO');
     return assignment;
@@ -163,6 +178,14 @@ async function quitar({ sescod, telcod }) {
       set_value: undefined // Forzar UPDATE directo (bypass SP) para proteger hil_act
     });
   }
+
+  // Notify poller instantly
+  bridge.emit('session.closed', {
+    telcod,
+    sescod,
+    newHilStart: newHilStart,
+    session_active: 0,
+  });
 
   return result;
 }

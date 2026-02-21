@@ -4,9 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const { upsertCache } = require('./cache.sync');
 const logger = require('../../server/lib/logger');
+const bridge = require('../../server/lib/poller-bridge');
 
 const STATE_FILE = path.join(__dirname, 'state.json');
-const SYNC_INTERVAL = 15000; // 15s
+const SYNC_INTERVAL = 5000; // 5s (reduced from 15s — bridge handles critical updates instantly)
 
 let state = {};
 let lastServerState = {};
@@ -42,7 +43,8 @@ function initState(items) {
         state[telcod] = { ...state[telcod], ...item, ts: now };
 
         // Update server state baseline (CRITICAL for session display)
-        lastServerState[telcod] = { ...item };
+        // Mark as _fromDisk so syncFromDB won't falsely detect resets
+        lastServerState[telcod] = { ...item, _fromDisk: true };
 
         // Prevent immediate sync flood
         lastSync[telcod] = now;
@@ -50,6 +52,9 @@ function initState(items) {
         dirty.add(telcod);
     });
     logger.info(`[persistence] Initialized ${items.length} items. Sync deferred.`);
+
+    // Subscribe to bridge events for instant notification
+    _subscribeBridge();
 }
 
 /** 
@@ -175,7 +180,9 @@ function syncFromDB(items) {
         }
 
         // 4. Detect Manual Counter Reset (Server 0, Local > 0)
-        if (srv.hil_act === 0 && (local.hil_act || 0) > 0) {
+        // ONLY if previous baseline came from a real DB sync (not from disk)
+        // Otherwise on restart, DB may not have been updated yet → false reset
+        if (srv.hil_act === 0 && (local.hil_act || 0) > 0 && !last._fromDisk) {
             state[telcod] = {
                 ...state[telcod],
                 hil_act: 0,
@@ -193,6 +200,119 @@ function syncFromDB(items) {
 
 function getState() {
     return state;
+}
+
+/** Flag to avoid double-subscribing */
+let _bridgeSubscribed = false;
+
+/** Subscribe to in-process bridge events for instant state updates */
+function _subscribeBridge() {
+    if (_bridgeSubscribed) return;
+    _bridgeSubscribed = true;
+
+    bridge.on('session.closed', ({ telcod, sescod, newHilStart, session_active }) => {
+        const now = Date.now();
+        logger.info(`[persistence] BRIDGE: session.closed telcod=${telcod}`);
+        state[telcod] = {
+            ...state[telcod],
+            session_active: 0,
+            sescod: null,
+            tracod: null,
+            traraz: null,
+            turno_cod: null,
+            inicio_dt: null,
+            hil_start: newHilStart,
+            hil_turno: 0,
+            ts: now,
+        };
+        lastServerState[telcod] = {
+            ...lastServerState[telcod],
+            session_active: 0,
+            sescod: null,
+            tracod: null,
+            traraz: null,
+            turno_cod: null,
+            inicio_dt: null,
+            hil_start: newHilStart,
+        };
+        dirty.add(telcod);
+    });
+
+    bridge.on('session.opened', ({ telcod, sescod, tracod, traraz, turno_cod, session_active, hil_act, hil_turno, hil_start, set_value }) => {
+        const now = Date.now();
+        logger.info(`[persistence] BRIDGE: session.opened telcod=${telcod} sescod=${sescod}`);
+        state[telcod] = {
+            ...state[telcod],
+            session_active: 1,
+            sescod,
+            tracod,
+            traraz,
+            turno_cod,
+            hil_act: hil_act ?? state[telcod]?.hil_act ?? 0,
+            hil_turno: hil_turno ?? state[telcod]?.hil_turno ?? 0,
+            hil_start: hil_start ?? state[telcod]?.hil_start ?? 0,
+            set_value: set_value ?? state[telcod]?.set_value ?? 0,
+            ts: now,
+        };
+        lastServerState[telcod] = {
+            ...lastServerState[telcod],
+            session_active: 1,
+            sescod,
+            tracod,
+            traraz,
+            turno_cod,
+            hil_start: hil_start ?? lastServerState[telcod]?.hil_start ?? 0,
+            set_value: set_value ?? lastServerState[telcod]?.set_value ?? 0,
+        };
+        dirty.add(telcod);
+    });
+
+    bridge.on('counter.reset', ({ telcod, hil_acum_offset, mode }) => {
+        const now = Date.now();
+        logger.info(`[persistence] BRIDGE: counter.reset telcod=${telcod} offset=${hil_acum_offset} mode=${mode}`);
+        state[telcod] = {
+            ...state[telcod],
+            hil_act: 0,
+            hil_acum_offset: hil_acum_offset,
+            ts: now,
+        };
+        lastServerState[telcod] = {
+            ...lastServerState[telcod],
+            hil_act: 0,
+            hil_acum_offset: hil_acum_offset,
+        };
+        // CRITICAL: Also update calc.reader's internal state so next computeFromPulse
+        // doesn't overwrite persistence state with old hil_act value
+        try {
+            const { seedFromCache } = require('./calc.reader');
+            seedFromCache({ telcod, hil_act: 0, hil_acum_offset: hil_acum_offset, _resetBaseline: true });
+        } catch (e) {
+            logger.warn(`[persistence] Failed to seed calc reader on reset: ${e.message}`);
+        }
+        dirty.add(telcod);
+    });
+
+    bridge.on('set.updated', ({ telcod, set_value }) => {
+        logger.info(`[persistence] BRIDGE: set.updated telcod=${telcod} set_value=${set_value}`);
+        state[telcod] = {
+            ...state[telcod],
+            set_value: set_value,
+        };
+        lastServerState[telcod] = {
+            ...lastServerState[telcod],
+            set_value: set_value,
+        };
+        // Update calc.reader too
+        try {
+            const { seedFromCache } = require('./calc.reader');
+            seedFromCache({ telcod, set_value: set_value });
+        } catch (e) {
+            logger.warn(`[persistence] Failed to seed calc reader on set: ${e.message}`);
+        }
+        dirty.add(telcod);
+    });
+
+    logger.info('[persistence] Bridge events subscribed');
 }
 
 module.exports = { load, process, initState, syncFromDB, getState };

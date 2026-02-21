@@ -45,6 +45,11 @@ function seedFromCache(params) {
   if (params.session_active !== undefined) s.session_active = Number(params.session_active);
   // CRITICAL: Restaurar lastAcumOffset para evitar "falsos resets" si el mapa parpadea a 0
   if (params.hil_acum_offset !== undefined) s.lastAcumOffset = Number(params.hil_acum_offset);
+  // Reset baseline: force next computeFromPulse to re-establish lastPulse
+  // This prevents the bounce where old deltas get added to hil_act=0
+  if (params._resetBaseline) {
+    s.offsetInitialized = false;
+  }
 }
 
 /**
@@ -62,13 +67,16 @@ function computeFromPulse({ telar, pulse, ts, pulsesPerRow = 1 }) {
   const now = ts || new Date();
   const p = Number(pulse) || 0;
 
-  // Primera lectura: sólo baseline de pulse, no movemos contadores
+  // Primera lectura: sólo baseline de pulse y offset, no movemos contadores
   if (!s.offsetInitialized) {
     s.lastPulse = p;
     s.lastTs = now;
+    // CRITICAL: Establish offset baseline from LIVE telar map, not stale state.json
+    // This prevents false reset detection on restart
+    s.lastAcumOffset = telar.hil_acum_offset || 0;
     s.offsetInitialized = true;
     if (logger && logger.debug) {
-      logger.debug(`[calc] init CALC telar=${telcod} basePulse=${p}`);
+      logger.debug(`[calc] init CALC telar=${telcod} basePulse=${p} baseOffset=${s.lastAcumOffset}`);
     }
     return {
       mode: 'CALC',
@@ -101,11 +109,10 @@ function computeFromPulse({ telar, pulse, ts, pulsesPerRow = 1 }) {
   // Los contadores CALC ahora siempre reportan velocidad = 0
   s.velocidad = 0;
 
-  // NEW: Ajuste por cambio de hil_acum_offset (Reset desde Supervisor)
+  // Ajuste por cambio de hil_acum_offset (Reset desde Supervisor)
+  // ONLY check after initialization — first call establishes baseline
   const currentOffset = telar.hil_acum_offset || 0;
-  if (s.lastAcumOffset === undefined) {
-    s.lastAcumOffset = currentOffset;
-  } else if (s.lastAcumOffset !== currentOffset) {
+  if (s.lastAcumOffset !== currentOffset) {
     const diff = currentOffset - s.lastAcumOffset;
     logger.info(`[calc] RESET DETECTED for ${telcod}: hil_act=${s.hil_act}, currentOffset=${currentOffset}, lastOffset=${s.lastAcumOffset}, diff=${diff}`);
     s.hil_act = Math.max(0, s.hil_act - diff);
