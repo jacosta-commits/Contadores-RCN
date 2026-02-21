@@ -65,48 +65,24 @@ async function cycle(telar, mapa) {
 
   try {
     const counter = registry.get(telar.telarKey, telar.mode);
-    let snapshot;
 
     if (telar.mode === 'PLC') {
       // PLC: inject hil_start for offset calculation
       telar.hil_start = counter.hil_start;
       const plcData = await readPLC(telar);
-      snapshot = counter.processPLC(plcData);
+      counter.processPLC(plcData);
     } else {
       // CALC: pulse-based delta accumulation
       const pulse = await readPulse(telar);
-      snapshot = counter.processPulse(pulse, telar);
+      counter.processPulse(pulse, telar);
     }
 
-    // DB sync (throttled per telar, write-behind)
-    const srvData = await registry.syncToDB(counter, telar);
+    // DB sync (throttled per telar, write-behind — WRITE ONLY, no read-back corrections)
+    // All state corrections come through bridge events (instant, not stale)
+    await registry.syncToDB(counter, telar);
 
-    // If server returned data, check for divergence
-    if (srvData) {
-      const srv = counter.getServerState();
-
-      // Sync hil_start if diverged (shift reset from Supervisor)
-      if (srv.hil_start !== undefined && srv.hil_start !== counter.hil_start) {
-        logger.debug(`[poller] SYNC: hil_start diverged (local=${counter.hil_start}, server=${srv.hil_start})`);
-        counter.seed({ hil_start: srv.hil_start });
-        if (telar.mode !== 'PLC') {
-          counter.hil_turno = Math.max(0, counter.hil_act - srv.hil_start);
-        }
-      }
-
-      // Sync set_value
-      if (srv.set_value !== undefined && srv.set_value !== counter.set_value) {
-        counter.set_value = srv.set_value;
-      }
-
-      // Sync hil_acum_offset → update telar map
-      if (srv.hil_acum_offset !== undefined && srv.hil_acum_offset !== (telar.hil_acum_offset || 0)) {
-        telar.hil_acum_offset = srv.hil_acum_offset;
-      }
-    }
-
-    // Rebuild snapshot after potential sync changes
-    snapshot = counter.toSnapshot();
+    // Get final snapshot for broadcast
+    const snapshot = counter.toSnapshot();
 
     // Disk persistence (throttled globally)
     registry.saveToDisk();

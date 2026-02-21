@@ -246,20 +246,21 @@ class TelarCounter {
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * Sync authoritative fields FROM the DB (sessions, resets, hil_start, set_value).
-     * Counter values (hil_act, hil_turno) are NOT overwritten — poller is authoritative.
+     * Sync FROM the DB (periodic safety net).
+     * ONLY syncs session metadata — counter values are NEVER overwritten.
+     * Counter changes (reset, set, session close) go through bridge events.
      * @param {object} srv - Server state from DB
      * @returns {boolean} true if any change was applied
      */
     syncFromServer(srv) {
-        const last = this._lastServerState;
         let changed = false;
 
-        // 1. Update server baseline
+        // 1. Update server baseline (for DB write throttle checks)
         this._lastServerState = { ...srv };
 
-        // 2. Detect Session Changes (Server is authority)
-        if (srv.session_active !== this.session_active) {
+        // 2. Detect Session Changes (Server is authority for session metadata ONLY)
+        if (srv.session_active !== undefined && srv.session_active !== this.session_active) {
+            logger.info(`[counter] syncFromServer ${this.telcod}: session changed ${this.session_active} → ${srv.session_active}`);
             this.session_active = srv.session_active;
             this.sescod = srv.sescod;
             this.tracod = srv.tracod;
@@ -269,25 +270,13 @@ class TelarCounter {
             changed = true;
         }
 
-        // 3. Detect hil_start changes (shift reset)
-        if (srv.hil_start !== undefined && srv.hil_start !== this.hil_start) {
-            this.hil_start = srv.hil_start;
-            this.hil_turno = Math.max(0, this.hil_act - srv.hil_start);
-            changed = true;
-        }
-
-        // 4. Detect Manual Counter Reset (Server 0, Local > 0)
-        // ONLY if previous baseline came from a real DB sync (not from disk)
-        if (srv.hil_act === 0 && this.hil_act > 0 && !last._fromDisk) {
-            this.hil_act = 0;
-            this.hil_turno = 0;
-            changed = true;
-        }
-
-        // 5. Sync set_value
-        if (srv.set_value !== undefined) {
-            this.set_value = srv.set_value;
-        }
+        // NOTE: hil_act, hil_turno, hil_start, set_value are NOT synced from DB.
+        // The poller is authoritative for counter values.
+        // Changes come ONLY through bridge events:
+        //   - counter.reset → resetAcum()
+        //   - set.updated → setSetValue()
+        //   - session.closed → closeSession()
+        //   - session.opened → openSession()
 
         if (changed) {
             this.ts = Date.now();
