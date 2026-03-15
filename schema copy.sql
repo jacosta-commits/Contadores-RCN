@@ -58,7 +58,6 @@ BEGIN
 
     activo              BIT          NOT NULL CONSTRAINT DF_RCN_CONT_TELAR_activo DEFAULT (1),
     created_at          DATETIME2    NOT NULL CONSTRAINT DF_RCN_CONT_TELAR_created_at DEFAULT (SYSDATETIME()),
-    hil_acum_offset     INT          NULL CONSTRAINT DF_RCN_CONT_TELAR_hil_acum_offset DEFAULT (0),
 
     CONSTRAINT PK_RCN_CONT_TELAR PRIMARY KEY CLUSTERED (telcod),
     CONSTRAINT CK_RCN_CONT_TELAR_modo CHECK (modo IN ('CALC','PLC'))
@@ -274,7 +273,6 @@ BEGIN
 
     updated_at     DATETIME2    NOT NULL CONSTRAINT DF_RCN_CONT_CACHE_updated_at     DEFAULT (SYSDATETIME()),
     rv             ROWVERSION,  -- opcional: para optimistic concurrency si lo quieres
-    hil_acum_offset INT         NULL CONSTRAINT DF_RCN_CONT_CACHE_hil_acum_offset    DEFAULT (0),
 
     CONSTRAINT PK_RCN_CONT_CACHE PRIMARY KEY CLUSTERED (telcod),
     CONSTRAINT FK_RCN_CONT_CACHE_TEL FOREIGN KEY (telcod)
@@ -770,7 +768,7 @@ WHEN NOT MATCHED THEN
   INSERT (telcod, telnom, grupo, modbus_ip, modbus_port, modbus_unit_id, modo,
           calc_pulse_offset, plc_base_offset, plc_hil_act_rel, plc_velocidad_rel,
           plc_hil_turno_rel, plc_set_rel, plc_hil_start_rel, plc_coil_reset,
-          plc_coil_fin_turno, activo, hil_acum_offset)
+          plc_coil_fin_turno, activo)
   VALUES (S.telcod, S.telnom, S.grupo, S.modbus_ip, S.modbus_port, S.modbus_unit_id, S.modo,
           CASE WHEN S.modo='CALC' THEN S.calc_pulse_offset ELSE NULL END,
           CASE WHEN S.modo='PLC'  THEN S.plc_base_offset   ELSE NULL END,
@@ -781,7 +779,7 @@ WHEN NOT MATCHED THEN
           CASE WHEN S.modo='PLC'  THEN S.plc_hil_start_rel ELSE NULL END,
           CASE WHEN S.modo='PLC'  THEN S.plc_coil_reset    ELSE NULL END,
           CASE WHEN S.modo='PLC'  THEN S.plc_coil_fin_turno ELSE NULL END,
-          S.activo, 0);
+          S.activo);
 GO
 
 /* Vista opcional con alias "front-friendly" (holdingOffset según modo) */
@@ -799,7 +797,6 @@ SELECT
   modo                                AS [mode],
   plc_coil_reset                      AS coilReset,
   plc_coil_fin_turno                  AS coilFinTurno,
-  hil_acum_offset                     AS hil_acum_offset,
   activo
 FROM dbo.RCN_CONT_TELAR
 WHERE activo = 1;
