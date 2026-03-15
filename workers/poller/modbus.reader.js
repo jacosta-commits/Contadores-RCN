@@ -1,32 +1,69 @@
 'use strict';
 
 /**
- * Lector Modbus (PLC y CALC) con pool de conexiones.
+ * Lector Modbus (PLC y CALC) con pool de conexiones auto-limpiable.
  * Requiere: npm i modbus-serial
+ * 
+ * ANTI-FREEZE: Cada conexión tiene TTL y último uso. Conexiones viejas
+ * o inactivas se cierran automáticamente para evitar sockets zombie.
  */
 
 const ModbusRTU = require('modbus-serial');
 const logger = require('../../server/lib/logger');
 
-const TCP_TIMEOUT = 2000; // ms (antes 5000) - Reducido para no bloquear el ciclo si hay muchas máquinas apagadas
-const TCP_RETRIES = 0;    // 0 retries para fallar rápido
-const HOLD_LEN_PLC = 16;  // margen
-const READ_TIMEOUT = 2000; // ms (antes 5000)
+const TCP_TIMEOUT = 2000;    // Timeout de conexión TCP (ms)
+const READ_TIMEOUT = 2000;   // Timeout de lectura Modbus (ms)
+const TCP_RETRIES = 0;       // 0 retries para fallar rápido
+const HOLD_LEN_PLC = 16;     // Margen de registros PLC
 
-const pool = new Map(); // IP -> Client
+// ── Pool con TTL y limpieza automática ──
+const POOL_TTL_MS = 30_000;       // Máximo 30s de vida por conexión
+const POOL_IDLE_MS = 15_000;      // Cerrar si no se usa en 15s
+const POOL_CLEANUP_MS = 10_000;   // Frecuencia de limpieza automática
+
+/** @type {Map<string, { client: ModbusRTU, createdAt: number, lastUsed: number }>} */
+const pool = new Map();
+
+// Limpieza automática del pool cada POOL_CLEANUP_MS
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of pool) {
+    const tooOld = (now - entry.createdAt) > POOL_TTL_MS;
+    const tooIdle = (now - entry.lastUsed) > POOL_IDLE_MS;
+    if (tooOld || tooIdle) {
+      try { entry.client.close(); } catch (_) { }
+      pool.delete(key);
+      logger.debug(`[modbus] Pool cleanup: ${key} (${tooOld ? 'TTL' : 'idle'})`);
+    }
+  }
+}, POOL_CLEANUP_MS);
+
+/** Destruir explícitamente una conexión del pool */
+function destroyClient(key) {
+  const entry = pool.get(key);
+  if (entry) {
+    try { entry.client.close(); } catch (_) { }
+    pool.delete(key);
+  }
+}
 
 async function getClient(t) {
   const key = `${t.modbusIP}:${t.modbusPort || 502}`;
 
   // 1. Intentar reutilizar del pool
   if (pool.has(key)) {
-    const cached = pool.get(key);
-    if (cached.isOpen) {
-      cached.setID(t.modbusID || 1);
-      return cached;
+    const entry = pool.get(key);
+    const now = Date.now();
+
+    // Forzar renovación si la conexión es muy vieja
+    if ((now - entry.createdAt) > POOL_TTL_MS) {
+      destroyClient(key);
+    } else if (entry.client.isOpen) {
+      entry.client.setID(t.modbusID || 1);
+      entry.lastUsed = now;
+      return entry.client;
     } else {
-      // Si está cerrado o roto, lo sacamos
-      pool.delete(key);
+      destroyClient(key);
     }
   }
 
@@ -51,13 +88,13 @@ async function getClient(t) {
 
   if (!connected) throw new Error('No se pudo conectar Modbus');
 
-  // 3. Guardar en pool
-  pool.set(key, client);
+  // 3. Guardar en pool con metadatos
+  const now = Date.now();
+  pool.set(key, { client, createdAt: now, lastUsed: now });
   return client;
 }
 
 async function readHolding(client, addr, len = 1) {
-  // Promise.race para forzar timeout real (modbus-serial no soporta AbortSignal)
   const readPromise = client.readHoldingRegisters(addr, len);
   const timeoutPromise = new Promise((_, reject) =>
     setTimeout(() => reject(new Error('Modbus Read Timeout')), READ_TIMEOUT)
@@ -67,9 +104,15 @@ async function readHolding(client, addr, len = 1) {
     const res = await Promise.race([readPromise, timeoutPromise]);
     return res.data || res.buffer;
   } catch (e) {
-    // Si falla por timeout, el socket queda en estado desconocido. Cerrarlo.
+    // Si falla por timeout, cerrar el socket zombie
     if (e.message === 'Modbus Read Timeout') {
-      try { await client.close(); } catch (_) { }
+      // Encontrar y destruir la entrada del pool para este client
+      for (const [key, entry] of pool) {
+        if (entry.client === client) {
+          destroyClient(key);
+          break;
+        }
+      }
     }
     throw e;
   }
@@ -77,66 +120,46 @@ async function readHolding(client, addr, len = 1) {
 
 /**
  * PLC: lee base + relativos (definidos en tabla)
- * Espera que el telar tenga:
- * - plc_base_offset, plc_hil_act_rel, plc_velocidad_rel, plc_hil_turno_rel, plc_set_rel, plc_hil_start_rel
  */
 async function readPLC(telar) {
   const client = await getClient(telar);
 
-  try {
-    const base = telar.holdingOffset; // en VIEW, para PLC es plc_base_offset
-    const rels = [
-      telar.plc_hil_act_rel ?? 0,
-      telar.plc_velocidad_rel ?? 4,
-      telar.plc_hil_turno_rel ?? 6,
-      telar.plc_set_rel ?? 7,
-      telar.plc_hil_start_rel ?? 10,
-    ];
-    const min = Math.min(...rels);
-    const max = Math.max(...rels);
-    const len = (max - min) + 1;
+  const base = telar.holdingOffset;
+  const rels = [
+    telar.plc_hil_act_rel ?? 0,
+    telar.plc_velocidad_rel ?? 4,
+    telar.plc_hil_turno_rel ?? 6,
+    telar.plc_set_rel ?? 7,
+    telar.plc_hil_start_rel ?? 10,
+  ];
+  const min = Math.min(...rels);
+  const max = Math.max(...rels);
+  const len = (max - min) + 1;
 
-    const regs = await readHolding(client, base + min, Math.max(len, HOLD_LEN_PLC));
+  const regs = await readHolding(client, base + min, Math.max(len, HOLD_LEN_PLC));
 
-    const pick = (rel) => regs[(rel - min)] ?? 0;
+  const pick = (rel) => regs[(rel - min)] ?? 0;
 
-    const hil_act_raw = pick(rels[0]);
-    const velocidad = pick(rels[1]);
-    const hil_turno = pick(rels[2]);
-    // const set_value = pick(rels[3]); // IGNORAR PLC: La autoridad es la DB (Web UI)
-    const hil_start = pick(rels[4]); // Este es el del PLC, pero usamos el nuestro del sync
+  const hil_act_raw = pick(rels[0]);
+  const velocidad = pick(rels[1]);
+  const hil_turno = pick(rels[2]);
+  const hil_start = pick(rels[4]);
 
-    // Aplicar offset local si existe (manejado por sync)
-    // El 'hil_start' que viene en 'telar' es el que se sincroniza con la DB
-    const offset = telar.hil_start || 0;
-    const acumOffset = telar.hil_acum_offset || 0;
+  const offset = telar.hil_start || 0;
+  const hil_act = hil_act_raw;
 
-    // CORRECCIÓN: Para PLC, hil_act es DIRECTAMENTE lo que leemos.
-    // El reset se hace por coil en el PLC, así que el RAW vuelve a 0.
-    // No usamos offset de software para PLC.
-    const hil_act = hil_act_raw;
+  const hil_turno_final = (telar.plc_hil_turno_rel != null) ? hil_turno : Math.max(0, hil_act_raw - offset);
+  const hil_start_final = (telar.plc_hil_start_rel != null) ? hil_start : offset;
 
-    // Para PLC, hil_turno y hil_start vienen del PLC (si existen en el mapa)
-    // Si no, usamos el cálculo local como fallback, pero la autoridad es el PLC.
-    const hil_turno_final = (telar.plc_hil_turno_rel != null) ? hil_turno : Math.max(0, hil_act_raw - offset);
-    const hil_start_final = (telar.plc_hil_start_rel != null) ? hil_start : offset;
-
-    if (telar.telarKey === '0069') {
-      logger.info({ telcod: telar.telarKey, raw: hil_act_raw, offset, acumOffset, hil_act, hil_turno: hil_turno_final, hil_start: hil_start_final }, '[modbus] PLC Read');
-    }
-
-    return {
-      mode: 'PLC',
-      hil_act,
-      hil_act_raw, // Guardamos el raw para usarlo como nuevo offset al resetear
-      velocidad,
-      hil_turno: hil_turno_final,
-      set_value: 0,
-      hil_start: hil_start_final,
-    };
-  } finally {
-    // try { await client.close(); } catch (_) { } // POOLING
-  }
+  return {
+    mode: 'PLC',
+    hil_act,
+    hil_act_raw,
+    velocidad,
+    hil_turno: hil_turno_final,
+    set_value: 0,
+    hil_start: hil_start_final,
+  };
 }
 
 /**
@@ -146,15 +169,12 @@ async function pulseCoil(telar, coilAddr) {
   if (coilAddr === null || coilAddr === undefined) return;
   const client = await getClient(telar);
   try {
-    // Write TRUE
     const p1 = client.writeCoil(coilAddr, true);
     const t1 = new Promise((_, r) => setTimeout(() => r(new Error('Modbus Write Timeout')), READ_TIMEOUT));
     await Promise.race([p1, t1]);
 
-    // Wait
     await new Promise(r => setTimeout(r, 500));
 
-    // Write FALSE
     const p2 = client.writeCoil(coilAddr, false);
     const t2 = new Promise((_, r) => setTimeout(() => r(new Error('Modbus Write Timeout')), READ_TIMEOUT));
     await Promise.race([p2, t2]);
@@ -162,27 +182,21 @@ async function pulseCoil(telar, coilAddr) {
     logger.info({ telcod: telar.telarKey, coilAddr }, '[modbus] Pulse sent');
   } catch (e) {
     if (e.message === 'Modbus Write Timeout') {
-      try { await client.close(); } catch (_) { }
+      const key = `${telar.modbusIP}:${telar.modbusPort || 502}`;
+      destroyClient(key);
     }
     throw e;
-  } finally {
-    // try { await client.close(); } catch (_) { } // POOLING
   }
 }
 
 /**
  * CALC: lee solo 1 registro (pulsos acumulados)
- * En la VIEW, holdingOffset = calc_pulse_offset.
  */
 async function readPulse(telar) {
   const client = await getClient(telar);
-  try {
-    const data = await readHolding(client, telar.holdingOffset, 1);
-    const pulse = data?.[0] ?? 0;
-    return pulse;
-  } finally {
-    // try { await client.close(); } catch (_) { } // POOLING
-  }
+  const data = await readHolding(client, telar.holdingOffset, 1);
+  const pulse = data?.[0] ?? 0;
+  return pulse;
 }
 
 /**
@@ -199,11 +213,10 @@ async function writeRegister(telar, addr, value) {
     logger.info({ telcod: telar.telarKey, addr, value }, '[modbus] Register written');
   } catch (e) {
     if (e.message === 'Modbus Write Timeout') {
-      try { await client.close(); } catch (_) { }
+      const key = `${telar.modbusIP}:${telar.modbusPort || 502}`;
+      destroyClient(key);
     }
     throw e;
-  } finally {
-    // try { await client.close(); } catch (_) { } // POOLING
   }
 }
 

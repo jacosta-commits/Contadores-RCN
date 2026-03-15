@@ -9,8 +9,13 @@ async function fx(url, opts = {}) {
   });
   if (!r.ok) {
     let err;
-    try { const j = await r.json(); err = j?.error || j?.message || r.statusText; }
-    catch { err = r.statusText; }
+    try {
+      const j = await r.json();
+      err = j?.error || j?.message || r.statusText;
+      if (typeof err === 'object') err = err.message || JSON.stringify(err);
+    } catch {
+      err = r.statusText;
+    }
     throw new Error(err);
   }
   const data = await r.json().catch(() => ({}));
@@ -60,6 +65,9 @@ export const api = {
     // Set total de lote (hilo)
     setTotal: (telcod, hilTotal) =>
       fx(`${API}/set/${encodeURIComponent(telcod)}`, { method: 'PUT', body: { set_value: hilTotal } }),
+    // Reset de acumulado neto
+    reset: (telcod) =>
+      fx(`${API}/util/reset/${encodeURIComponent(telcod)}`, { method: 'POST' }),
   },
 
   // Sesión-Telar (azúcar /sesiones/:sescod/telares/:telcod)

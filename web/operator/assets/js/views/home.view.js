@@ -53,9 +53,10 @@ export function render(container) {
     patchByTelar(t, vals);
   });
 
-  // Wire SET double-click/double-tap on each telar's SET row
+  // Wire SET and RESET double-click/double-tap on each telar
   [left, right].filter(Boolean).forEach(t => {
     wireSetEvent(t);
+    wireResetEvent(t);
   });
 
   refreshHeader();
@@ -101,7 +102,12 @@ export async function openCall(telcod) {
   if (!t) { await ensureTelares(); }
   const tel = telcod || store.telares?.[0]?.telcod || store.telares?.[1]?.telcod;
   if (!tel) return;
-  await openCallModalUI({ telcod: tel, sescod: store.session.sescod });
+
+  // Buscar nombre bonito en store.telares
+  const telObj = (store.telares || []).find(x => (x.telcod || x.key) == tel);
+  const telnom = telObj?.telnom || telObj?.alias || null;
+
+  await openCallModalUI({ telcod: tel, sescod: store.session.sescod, telnom });
 }
 
 export async function openPendientes() {
@@ -218,6 +224,59 @@ async function handleSetTap(telcod) {
     showAlertModal('✅ SET actualizado', `SET del telar actualizado a ${num}.`);
   } catch (e) {
     showAlertModal('❌ Error', `No se pudo actualizar: ${e.message}`);
+  }
+}
+
+/* ===== RESET con doble-tap + contraseña ===== */
+
+function wireResetEvent(telcod) {
+  const p = idPrefixFor(telcod);
+  const actEl = document.getElementById(`${p}-hact`);
+  if (!actEl) return;
+
+  // Find the .row parent for better tap target
+  const rowEl = actEl.closest('.row');
+  const target = rowEl || actEl;
+
+  target.style.cursor = 'pointer';
+
+  target.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    handleResetTap(telcod);
+  });
+
+  // Double-tap support for mobile (touchend)
+  let lastTap = 0;
+  target.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTap < 400) {
+      e.preventDefault();
+      handleResetTap(telcod);
+      lastTap = 0;
+    } else {
+      lastTap = now;
+    }
+  });
+}
+
+async function handleResetTap(telcod) {
+  // Step 1: Ask for password
+  const pwd = await showInputModal('🔒 Contraseña requerida', 'Ingrese la contraseña para resetear HIL ACUM:', '', 'password');
+  if (pwd === null) return; // cancelled
+
+  if (pwd !== SET_PASSWORD) {
+    showAlertModal('⚠️ Acceso denegado', 'Contraseña incorrecta. No tiene permiso para resetear.');
+    return;
+  }
+
+  // Step 2: Confirm action
+  if (confirm(`¿Está seguro que desea RESETEAR el acumulado del Telar ${telcod}?`)) {
+    try {
+      await api.telares.reset(telcod);
+      showAlertModal('✅ RESET', `El telar ${telcod} ha sido reseteado correctamente.`);
+    } catch (e) {
+      showAlertModal('❌ Error', `No se pudo resetear: ${e.message}`);
+    }
   }
 }
 

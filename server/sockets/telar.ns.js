@@ -243,6 +243,13 @@ function setup(io) {
     });
   });
 
+  // Suscribirse al bus interno del backend para expulsar dispositivos por WebSocket
+  const bus = require('../lib/poller-bridge');
+  bus.on('sesion.cerrada', (payload) => {
+    logger.info(`[socket${NS}] Emitiendo 'sesion.cerrada' globalmente para sescod=${payload.sescod}`);
+    nsp.emit('sesion.cerrada', payload);
+  });
+
   logger.info(`[socket] namespace ${NS} listo`);
 }
 

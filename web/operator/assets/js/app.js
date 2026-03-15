@@ -62,6 +62,21 @@ async function bootstrap() {
       if (!payload?.telcod) return;
       store.setCounter(payload.telcod, payload);
       patchByTelar(payload.telcod, payload);
+    },
+    onSessionClosed: (payload) => {
+      // Si la sesión cerrada por el servidor es la mía actual
+      if (store.session?.sescod && String(payload?.sescod) === String(store.session.sescod)) {
+        if (!window._isManualClose) {
+          console.warn('⚠️ Sesión terminada remotamente (ej: expiración de tiempo). Cerrando UI...');
+          alert('Tu turno ha sido cerrado automáticamente por límite de tiempo o por un administrador.');
+        }
+        window._isManualClose = false;
+        store.setSession(null);
+        applyHeader();
+        renderHome($('#app'));
+        Layout.showSingleLayout();
+        setTimeout(() => startNewSession(), 500);
+      }
     }
   });
 
@@ -119,13 +134,24 @@ async function bootstrap() {
 
   wireLayoutActions();
 
-  // Polling de pendientes
+  // Polling de pendientes y validación periódica de sesión (fallback)
   async function refreshPendingCount() {
     if (!store.session?.sescod) return;
     try {
       const list = await api.llamadas.listar({ estado: 'A', sescod: store.session.sescod });
       const n = Array.isArray(list) ? list.length : 0;
       store.events.emit('pend:update', n);
+
+      // Verificación pasiva de sesión por si se cerró por BD/Job y el WS falló
+      const sessData = await api.sesiones.detalle(store.session.sescod);
+      if (!sessData || sessData.activo === 0 || sessData.activo === false) {
+        console.warn('[app] Background check: Sesión cerrada en el servidor');
+        store.setSession(null);
+        applyHeader();
+        renderHome($('#app'));
+        Layout.showSingleLayout();
+        setTimeout(() => startNewSession(), 500);
+      }
     } catch { }
   }
 
@@ -135,8 +161,19 @@ async function bootstrap() {
   if (!store.session) {
     await startNewSession();
   } else {
-    Layout.showSingleLayout(); // Por defecto single si ya hay sesión
-    refreshPendingCount();
+    // Validar sesión contra el servidor al arrancar
+    try {
+      const sessData = await api.sesiones.detalle(store.session.sescod);
+      if (!sessData || sessData.activo === 0 || sessData.activo === false) {
+        throw new Error('Sesión inactiva en servidor');
+      }
+      Layout.showSingleLayout(); // Por defecto single si ya hay sesión
+      refreshPendingCount();
+    } catch (e) {
+      console.warn('[app] Sesión local inválida o expirada:', e.message);
+      store.setSession(null);
+      await startNewSession();
+    }
   }
 }
 bootstrap();
@@ -217,6 +254,7 @@ async function applyHeader() {
   if (btn) {
     btn.onclick = async () => {
       if (!confirm('¿Seguro que desea terminar el turno?')) return;
+      window._isManualClose = true; // Prevenir alerta de websockets
       try { await snapshotFinYQuitarTelares(); } catch { }
       try { await api.sesiones.cerrar(store.session.sescod); } catch { }
       store.setSession(null);
@@ -272,10 +310,18 @@ function wireLayoutActions() {
 
     else if (action === 'encarretadora') {
       if (!hasSession()) { alert('Inicia tu turno para usar Encarretador.'); return; }
-      const t = telOf(store.telares[0]) || telOf(store.telares[1]);
+
+      const sessionOpts = [store.telares[0], store.telares[1]].filter(Boolean);
+      // Intentar obtener el objeto telar completo
+      let tObj = null;
+      if (sessionOpts.length > 0) tObj = sessionOpts[0];
+
+      const t = telOf(tObj);
       if (!t) return alert('Selecciona un telar.');
 
-      if (!confirm(`¿Llamar al ENCARRETADOR para el Telar ${t}?`)) return;
+      const telnom = tObj?.telnom || tObj?.alias || `Telar ${t}`;
+
+      if (!confirm(`¿Llamar al ENCARRETADOR para ${telnom}?`)) return;
 
       try {
         await api.llamadas.crear({

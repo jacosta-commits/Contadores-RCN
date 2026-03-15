@@ -204,7 +204,9 @@ class TelarCounter {
         this.tracod = tracod;
         this.traraz = traraz;
         this.turno_cod = turno_cod;
+
         if (hil_start !== undefined) this.hil_start = hil_start;
+
         if (set_value !== undefined) this.set_value = set_value;
         this.ts = Date.now();
         this.dirty = true;

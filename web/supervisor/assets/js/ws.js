@@ -37,7 +37,7 @@ function handleIncoming(payload) {
     if (norm.telcod) _onState(norm);
 }
 
-export function init({ onState = () => { } } = {}) {
+export function init({ onState = () => { }, onSessionClosed = () => { } } = {}) {
     _onState = onState;
 
     try {
@@ -54,6 +54,11 @@ export function init({ onState = () => { } } = {}) {
         socket.on('broadcast', handleIncoming);
         socket.on('update', handleIncoming);
         socket.on('snapshot', handleIncoming); // FIX: Listen for initial snapshot
+
+        socket.on('sesion.cerrada', (payload) => {
+            console.warn('[ws] sesion.cerrada (supervisor log)', payload);
+            onSessionClosed(payload);
+        });
 
         // Listen for forced reload from admin
         socket.on('force-reload', () => {

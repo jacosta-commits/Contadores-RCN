@@ -143,13 +143,13 @@ async function start() {
     setTimeout(() => process.exit(1), 250);
   });
 
-  // Tarea Automática: Cierre de Sesiones Expiradas (cada 1 minuto)
-  const sesionService = require('./services/sesion.service');
-  setInterval(() => {
-    sesionService.cerrarExpiradas().catch(e => {
-      logger.error('[sys] Error en tarea automática de cierre de sesiones:', e);
-    });
-  }, 60 * 1000); // 1 minuto
+  // Tarea Automática: Cierre de Sesiones Expiradas — DESACTIVADA por solicitud del usuario
+  // const sesionService = require('./services/sesion.service');
+  // setInterval(() => {
+  //   sesionService.cerrarExpiradas().catch(e => {
+  //     logger.error('[sys] Error en tarea automática de cierre de sesiones:', e);
+  //   });
+  // }, 60 * 1000); // 1 minuto
 }
 
 // Ejecuta

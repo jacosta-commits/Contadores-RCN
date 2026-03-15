@@ -56,7 +56,7 @@ function handleIncoming(payload) {
   if (norm.telcod) _onState(norm);
 }
 
-export function init({ onState = () => { } } = {}) {
+export function init({ onState = () => { }, onSessionClosed = () => { } } = {}) {
   _onState = onState;
 
   // 1) Socket primario en /telar
@@ -89,6 +89,12 @@ export function init({ onState = () => { } } = {}) {
     socket.on('update', handleIncoming);    // diffs (compat con server raíz)
     socket.on('snapshot', handleIncoming);  // opcional al conectar
     socket.on('state.push', handleIncoming); // FIX: Listen for direct push events
+
+    // Remote session termination from backend (auto-close, timeouts, etc)
+    socket.on('sesion.cerrada', (payload) => {
+      console.warn('[ws] sesion.cerrada detectada', payload);
+      onSessionClosed(payload);
+    });
 
     // Listen for forced reload from admin
     socket.on('force-reload', () => {

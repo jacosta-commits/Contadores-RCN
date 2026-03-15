@@ -16,7 +16,6 @@ async function asignar({ sescod, telcod }) {
     const cacheState = await cacheDAL.getByTelcod(telcod);
 
     // 3. Registrar INICIO_TURNO automáticamente con el snapshot actual
-    // (No tocamos hil_start al iniciar, solo al cerrar)
     const lecturaSvc = require('./lectura.service');
     await lecturaSvc.registrarInicio({
       sescod,
@@ -90,7 +89,7 @@ async function asignar({ sescod, telcod }) {
     return assignment;
 
   } catch (err) {
-    // Mapear violación de índice único "telar ocupado" a 409 Conflict
+    // Mapear violación de índice único "telar ocupado" a cierre de sesión fantasma + reintento
     const num = err?.number ?? err?.originalError?.info?.number;
     const msg = String(err?.message || err?.originalError?.message || '');
 
@@ -98,8 +97,33 @@ async function asignar({ sescod, telcod }) {
       num === 2627 || num === 2601 || msg.includes('UQ_RCN_CONT_TELAR_OCUPADO');
 
     if (isUnique) {
+      // Intentar cerrar la sesión fantasma que bloquea este telar
       let occ = null;
       try { occ = await stDAL.getOcupacionActual({ telcod }); } catch (_) { }
+
+      if (occ && occ.sescod && occ.sescod !== sescod) {
+        logger.warn(
+          { telcod, sesionFantasma: occ.sescod, nuevaSesion: sescod },
+          '[asignar] Telar ocupado por sesión fantasma — cerrando automáticamente para liberar'
+        );
+
+        try {
+          // Cerrar la sesión fantasma de forma limpia (FIN_TURNO, reset hil_turno, cancelar llamadas, etc.)
+          const sesionService = require('./sesion.service');
+          await sesionService.cerrar({ sescod: occ.sescod });
+          logger.info({ sesionFantasma: occ.sescod, telcod }, '[asignar] Sesión fantasma cerrada exitosamente');
+
+          // Reintentar la asignación original
+          return await asignar({ sescod, telcod });
+        } catch (closeErr) {
+          logger.error(
+            { err: closeErr.message, sesionFantasma: occ.sescod, telcod },
+            '[asignar] Error cerrando sesión fantasma — no se pudo liberar el telar'
+          );
+        }
+      }
+
+      // Si no se pudo cerrar la sesión fantasma, lanzar el 409 original
       const sesOcupadora = occ?.sescod ?? '(desconocida)';
       throw new HttpError(
         409,
@@ -180,12 +204,14 @@ async function quitar({ sescod, telcod }) {
   }
 
   // Notify poller instantly
+  logger.info({ telcod, sescod, newHilStart }, '[quitar] Emitting bridge session.closed to poller');
   bridge.emit('session.closed', {
     telcod,
     sescod,
     newHilStart: newHilStart,
     session_active: 0,
   });
+  logger.info({ telcod }, '[quitar] Bridge session.closed emitted OK');
 
   return result;
 }

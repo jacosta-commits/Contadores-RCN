@@ -35,16 +35,16 @@ async function crear({ sescod, telcod, categoria = null, mensaje = null }) {
     'DEFAULT': ['7968380850', '7611303895']
   };
 
-  /* const CHAT_MAP = {
-     'MC': ['1546558805'], // Mecánico / Calidad
-     'M': ['1546558805'],                             // Mecánico
-     'S': ['1546558805'],                             // Supervisor / Auxiliar
-     'E': ['1546558805'],                             // Electricista
-     'Q': ['1546558805'],               // Calidad
-     'G': ['1546558805'],               // Gancho Inferior
-     'EN': ['1546558805'],               // Encarretadora
-     'DEFAULT': ['1546558805']
-   };*/
+  /*const CHAT_MAP = {
+    'MC': ['1546558805'], // Mecánico / Calidad
+    'M': ['1546558805'],                             // Mecánico
+    'S': ['1546558805'],                             // Supervisor / Auxiliar
+    'E': ['1546558805'],                             // Electricista
+    'Q': ['1546558805'],               // Calidad
+    'G': ['1546558805'],               // Gancho Inferior
+    'EN': ['1546558805'],               // Encarretadora
+    'DEFAULT': ['1546558805']
+  };*/
 
   for (const cat of cats) {
     // 1. Crear registro individual en BD
@@ -85,10 +85,14 @@ async function crear({ sescod, telcod, categoria = null, mensaje = null }) {
       logger.warn('[llamada.service] error fetching telnom:', e.message);
     }
 
+    const mDate = new Date();
+    const dateStr = mDate.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const timeStr = mDate.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
+
     const msg = `🚨 <b>LLAMADA ${telDisplayName}</b>\n\n` +
       `<b>Motivo:</b> ${catLabel}\n` +
       (mensaje ? `<b>Nota:</b> ${mensaje}\n` : '') +
-      `<i>Sesión: ${sescod}</i>`;
+      `<i>Hora: ${dateStr} ${timeStr}</i>`;
 
     telegram.broadcast(msg, recipients).catch(err => logger.error('[llamada.service] telegram error:', err));
   }

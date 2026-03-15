@@ -56,7 +56,10 @@ async function primeBaselines() {
 
 /**
  * Single telar cycle: read → process → sync → broadcast.
+ * Wrapped with a global timeout to prevent any single telar from freezing the loop.
  */
+const CYCLE_TIMEOUT_MS = 5000; // 5s max per telar cycle
+
 async function cycle(telar, mapa) {
   // Backoff: skip if failed recently
   if (telar.nextRetry && Date.now() < telar.nextRetry) return;
@@ -113,6 +116,21 @@ async function cycle(telar, mapa) {
   }
 }
 
+/** Wraps cycle() with a hard timeout to prevent freezes */
+async function safeCycle(telar, mapa) {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`CYCLE TIMEOUT ${telar.telarKey}`)), CYCLE_TIMEOUT_MS)
+  );
+  try {
+    await Promise.race([cycle(telar, mapa), timeout]);
+  } catch (e) {
+    if (e.message.startsWith('CYCLE TIMEOUT')) {
+      logger.error(`[poller] ⚠️ HARD TIMEOUT on telar=${telar.telarKey} — skipping`);
+      telar.nextRetry = Date.now() + 15000; // Backoff 15s after timeout
+    }
+  }
+}
+
 async function main() {
   logger.info(`[poller] start → group=${GROUP || '(all)'} period=${PERIOD_MS}ms conc=${CONC} PPR=${PPR}`);
   await initSockets(WS_URL);
@@ -160,7 +178,7 @@ async function main() {
           if (JITTER > 0) await delay(Math.random() * JITTER);
 
           const startCycle = Date.now();
-          await cycle(telar, mapa);
+          await safeCycle(telar, mapa);
           const duration = Date.now() - startCycle;
 
           if (duration > 500) {
@@ -201,7 +219,10 @@ async function main() {
     // Periodic DB Sync (Sessions & Resets) — safety net; bridge handles instant updates
     if (Date.now() - (global.lastDbSync || 0) > 3000) {
       try {
-        const rec = await pullRecovery(API_BASE);
+        const syncTimeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('DB Sync Timeout')), 5000)
+        );
+        const rec = await Promise.race([pullRecovery(API_BASE), syncTimeout]);
         const items = Array.isArray(rec) ? rec : (rec?.data || []);
         if (items.length > 0) {
           registry.syncFromDB(items);

@@ -22,22 +22,25 @@ async function cerrar({ sescod, fin = null }) {
   logger.info({ sescod }, '[cerrar] Iniciando cierre de sesión');
 
   // 1. Obtener telares activos de esta sesión
-  const activos = await stDAL.listActivos({ sescod });
-  logger.info({ sescod, activos }, `[cerrar] Telares activos: ${activos.length}`);
+  let activos = [];
+  try {
+    activos = await stDAL.listActivos({ sescod });
+    logger.info({ sescod, activos }, `[cerrar] Telares activos: ${activos.length}`);
+  } catch (e) {
+    logger.warn({ e, sescod }, '[cerrar] Error listando telares activos - continuando con cierre');
+  }
 
   // 2. Para cada telar activo, leer su estado actual del cache (EN PARALELO)
-  const cacheDAL = require('../dal/cache.dal'); // Lazy require
-  const lecturaSvc = require('./lectura.service'); // Lazy require para evitar ciclos si hubiera
+  const cacheDAL = require('../dal/cache.dal');
+  const lecturaSvc = require('./lectura.service');
   const sesionTelarSvc = require('./sesion-telar.service');
 
   await Promise.all(activos.map(async (t) => {
     try {
-      // Leer estado actual del telar desde el cache
       const cacheState = await cacheDAL.getByTelcod(t.telcod);
       logger.info({ telcod: t.telcod, cacheState }, '[cerrar] Estado del cache antes de FIN');
 
       if (cacheState) {
-        // Registrar FIN con los valores actuales del cache
         await lecturaSvc.registrarFin({
           sescod,
           telcod: t.telcod,
@@ -53,7 +56,6 @@ async function cerrar({ sescod, fin = null }) {
         logger.warn({ telcod: t.telcod }, 'Telar no encontrado en cache al cerrar sesión');
       }
 
-      // IMPORTANTE: Desasignar el telar (marcar activo=0 en RCN_CONT_SESION_TELAR)
       await sesionTelarSvc.quitar({ sescod, telcod: t.telcod });
       logger.info({ telcod: t.telcod }, '[cerrar] Telar desasignado y turno reseteado');
 
@@ -73,9 +75,38 @@ async function cerrar({ sescod, fin = null }) {
     logger.warn({ e, sescod }, 'Error anulando llamadas pendientes al cerrar sesión');
   }
 
-  // 3. Cerrar la sesión en sí
-  logger.info({ sescod }, '[cerrar] Cerrando sesión en BD');
-  return sesionesDAL.cerrar({ sescod, fin });
+  // 3. CRÍTICO: Cerrar la sesión en sí — SIEMPRE debe ejecutarse
+  // aunque los pasos anteriores fallen, para evitar sesiones "fantasma"
+  let res;
+  try {
+    logger.info({ sescod }, '[cerrar] Cerrando sesión en BD');
+    res = await sesionesDAL.cerrar({ sescod, fin });
+  } catch (e) {
+    logger.error({ e, sescod }, '[cerrar] ERROR CRÍTICO cerrando sesión en BD. Intentando forzar cierre...');
+    // Fallback: intentar cerrar de todas formas directamente
+    try {
+      const { query: dbQuery, sql: dbSql } = require('../dal/db');
+      await dbQuery(`
+        UPDATE dbo.RCN_CONT_SESION SET activo = 0, estado = 'F', fin = @fin WHERE sescod = @sescod
+      `, req => {
+        req.input('sescod', dbSql.BigInt, sescod);
+        req.input('fin', dbSql.DateTime2, fin || new Date());
+      });
+      logger.info({ sescod }, '[cerrar] Sesión cerrada vía fallback directo');
+    } catch (fallbackErr) {
+      logger.error({ fallbackErr, sescod }, '[cerrar] FALLBACK TAMBIÉN FALLÓ — sesión puede quedar abierta');
+    }
+  }
+
+  // 4. Emitir evento global para que las tablets reaccionen
+  try {
+    const bus = require('../lib/poller-bridge');
+    bus.emit('sesion.cerrada', { sescod });
+  } catch (e) {
+    logger.warn({ e, sescod }, '[cerrar] Error emitiendo evento sesion.cerrada');
+  }
+
+  return res;
 }
 
 /** Detalle de sesión */

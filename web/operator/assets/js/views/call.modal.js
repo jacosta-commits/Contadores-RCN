@@ -14,7 +14,7 @@ const CATS = [
   { k: 'G', label: 'Gancho Inferior' },
 ];
 
-export function openCallModal({ telcod, sescod }) {
+export function openCallModal({ telcod, sescod, telnom = null }) {
   return new Promise((resolve) => {
     // Buscar contenedor del telar para posicionamiento relativo
     const container = document.querySelector(`.counter-wrap[data-telcod="${telcod}"]`) || document.body;
@@ -69,10 +69,11 @@ export function openCallModal({ telcod, sescod }) {
     overlay.appendChild(style);
 
     // HTML Structure
+    const displayLabel = telnom ? telnom : `Telar ${telcod}`;
     overlay.innerHTML += `
       <!-- Panel de Selección -->
       <div class="panel-llamada" id="panelSelection">
-        <h2>Llamada a Telar ${telcod}</h2>
+        <h2>Llamada a ${displayLabel}</h2>
         
         <div class="btn-group-call">
           ${CATS.map(c => `

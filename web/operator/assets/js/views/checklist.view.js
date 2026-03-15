@@ -26,6 +26,18 @@ export async function openChecklistView({ sescod, telares, readonly = false }) {
     return;
   }
 
+  // Helper function to get friendly name
+  const getTelnom = (t) => {
+    const ts = String(t);
+    const tn = Number(t);
+    // Buscar en el estado global si tenemos su nombre "amigable"
+    const c = store.counters[ts] || store.counters[tn];
+    if (c && c.telnom) return c.telnom;
+    // Fallback: buscar en la lista original de telares del store
+    const fullTelar = store.telares.find(x => String(x.codigo) === ts || String(x.telcod) === ts);
+    return fullTelar?.telnom || fullTelar?.nombre || fullTelar?.label || `Telar ${ts}`;
+  };
+
   const preguntas = [
     { id: 'q1', key: 'rodillo_principal', text: "¿Hilos mal pasados en rodillo principal?" },
     { id: 'q2', key: 'sensores_urdimbre', text: "¿Hilos en Sensores Urdimbre OK?" },
@@ -48,7 +60,7 @@ export async function openChecklistView({ sescod, telares, readonly = false }) {
         <!-- Header Row -->
         <div class="row header-row">
           <div class="cell cell-pregunta">Pregunta</div>
-          ${tels.map(t => `<div class="cell cell-telar">Telar ${t}</div>`).join('')}
+          ${tels.map(t => `<div class="cell cell-telar">${getTelnom(t)}</div>`).join('')}
         </div>
 
         <!-- Questions Rows -->

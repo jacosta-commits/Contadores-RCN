@@ -24,6 +24,17 @@ async function bootstrap() {
     wsInit({
         onState: (payload) => {
             store.updateCounter(payload.telcod, payload);
+        },
+        onSessionClosed: async () => {
+            console.log('[Supervisor] Sesión cerrada detectada, recargando grilla...');
+            try {
+                const res = await api.telares.list({ activos: true });
+                const telares = Array.isArray(res) ? res : (res.data || []);
+                store.setTelares(telares);
+                renderGrid(telares);
+            } catch (e) {
+                console.error('Error recargando telares tras cierre de sesión:', e);
+            }
         }
     });
 
