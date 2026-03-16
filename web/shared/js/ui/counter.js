@@ -5,7 +5,10 @@ export function renderCounter({ idPrefix, title = '' } = {}) {
   const p = idPrefix || 'ctr';
   return `
     <div class="main-container">
-      <div class="title-telar">${title}</div>
+      <div class="title-telar">
+        <span class="telar-name">${title}</span>
+        <span class="tarjeta-name" id="${p}-tarjeta"></span>
+      </div>
       <div class="content-container">
         <div class="display flex-1">
           
@@ -54,10 +57,16 @@ export function patchCounter(idPrefix, data = {}) {
     hturno: (data.hil_turno ?? data.hilTurno),
     hact: (data.hil_act ?? data.hilActual ?? data.hil_acum),
     set: (data.set_value ?? data.set ?? data.hil_total ?? data.total),
+    tarjeta: data.tarjeta_display ?? data.tarjeta,
   };
   Object.entries(map).forEach(([k, v]) => {
     const el = qs(k);
     if (!el) return;
+
+    if (k === 'tarjeta') {
+      el.textContent = v || '';
+      return;
+    }
 
     // Direct assignment — no tween animation (prevents jitter and interpolation on reset)
     el.textContent = fmt(v);

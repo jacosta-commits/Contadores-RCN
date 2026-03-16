@@ -122,6 +122,13 @@ async function start() {
       // DB
       await closeDatabase();
 
+      try {
+        const scadaSyncService = require('./services/scadaSync.service');
+        scadaSyncService.stop();
+      } catch (e) {
+        logger.error('[sys] error al detener scadaSync:', e);
+      }
+
       logger.info('[sys] apagado completo. Bye.');
       process.exit(0);
     } catch (err) {
@@ -150,6 +157,10 @@ async function start() {
   //     logger.error('[sys] Error en tarea automática de cierre de sesiones:', e);
   //   });
   // }, 60 * 1000); // 1 minuto
+
+  // INICIAR EL POLLER SCADA (Sincronización de Medidores 2023 a Zentrik)
+  const scadaSyncService = require('./services/scadaSync.service');
+  scadaSyncService.start();
 }
 
 // Ejecuta

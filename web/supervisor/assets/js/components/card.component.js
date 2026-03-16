@@ -24,6 +24,7 @@ export function createCardHTML(t) {
         <!-- Título y velocidad -->
         <div class="title-row">
           <h3 class="title-telar">${titulo}</h3>
+          <span class="tarjeta-display" id="tarjeta-${telcod}"></span>
           <span class="speed-display" id="speed-${telcod}">-- HPM</span>
         </div>
 
@@ -78,9 +79,12 @@ export function updateCard(telcod, data) {
   const card = document.getElementById(`card-${telcod}`);
   if (!card) return;
 
-  // 1. Velocidad
+  // 1. Velocidad y Tarjeta
   const speedEl = document.getElementById(`speed-${telcod}`);
   if (speedEl) speedEl.textContent = (data.velocidad > 0) ? `${data.velocidad} HPM` : '-- HPM';
+
+  const tarjetaEl = document.getElementById(`tarjeta-${telcod}`);
+  if (tarjetaEl) tarjetaEl.textContent = data.tarjeta_display || '';
 
   // 2. Valores
   const valStart = document.getElementById(`val-start-${telcod}`);

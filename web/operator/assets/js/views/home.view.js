@@ -70,6 +70,7 @@ export function patchByTelar(telcod, payload = {}) {
     hil_turno: payload.hil_turno ?? payload.hilTurno ?? 0,
     hil_act: payload.hil_act ?? payload.hilActual ?? payload.hil_acum ?? 0,
     set_value: payload.set_value ?? payload.set ?? payload.hil_total ?? payload.total ?? 0,
+    tarjeta: payload.tarjeta_display ?? payload.tarjeta ?? '',
   };
   // cache para modales/resumen
   store.counters = store.counters || {};

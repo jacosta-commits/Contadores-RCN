@@ -466,9 +466,23 @@ SELECT
   c.velocidad,
   c.updated_at,
   c.hil_acum_offset,
-  s.inicio AS inicio_dt
+  s.inicio AS inicio_dt,
+  CASE 
+      WHEN op.tarjeta IS NULL THEN NULL
+      WHEN op.batches > 1 THEN op.tarjeta + '-' + CAST(op.batches AS VARCHAR(10))
+      ELSE op.tarjeta
+  END AS tarjeta_display
 FROM dbo.RCN_CONT_CACHE c
-LEFT JOIN dbo.RCN_CONT_SESION s ON c.sescod = s.sescod;
+LEFT JOIN dbo.RCN_CONT_SESION s ON c.sescod = s.sescod
+OUTER APPLY (
+    SELECT TOP 1 
+        i.tarjeta,
+        (SELECT COUNT(*) FROM dbo.RCN_CONT_OPERACION_ITEM WHERE opid = o.opid) AS batches
+    FROM dbo.RCN_CONT_OPERACION o
+    JOIN dbo.RCN_CONT_OPERACION_ITEM i ON o.opid = i.opid
+    WHERE o.telcod = c.telcod AND o.activo = 1
+    ORDER BY i.batch ASC
+) op;
 GO
 
 -- Vista de resumen INICIO/FIN por (sescod, telcod) para reportes

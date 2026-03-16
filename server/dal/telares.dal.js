@@ -5,11 +5,13 @@ const { sql, query } = require('./db');
 /** Lista de telares con filtros opcionales */
 async function listAll({ grupo = null, activos = true } = {}) {
   let q = `
-    SELECT telcod, telnom, grupo, modbus_ip, modbus_port, modbus_unit_id,
-           modo, calc_pulse_offset, plc_base_offset, plc_hil_act_rel,
-           plc_velocidad_rel, plc_hil_turno_rel, plc_set_rel, plc_hil_start_rel,
-           plc_coil_reset, plc_coil_fin_turno, activo, created_at, hil_acum_offset
-    FROM dbo.RCN_CONT_TELAR
+    SELECT t.telcod, t.telnom, t.grupo, t.modbus_ip, t.modbus_port, t.modbus_unit_id,
+           t.modo, t.calc_pulse_offset, t.plc_base_offset, t.plc_hil_act_rel,
+           t.plc_velocidad_rel, t.plc_hil_turno_rel, t.plc_set_rel, t.plc_hil_start_rel,
+           t.plc_coil_reset, t.plc_coil_fin_turno, t.activo, t.created_at, t.hil_acum_offset,
+           r.tarjeta_display
+    FROM dbo.RCN_CONT_TELAR t
+    LEFT JOIN dbo.VW_RCN_CONT_RECOVERY r ON t.telcod = r.telcod
     WHERE 1=1
   `;
   const params = [];
@@ -32,12 +34,14 @@ async function listAll({ grupo = null, activos = true } = {}) {
 /** Un telar por telcod */
 async function getByTelcod(telcod) {
   const rs = await query(`
-    SELECT telcod, telnom, grupo, modbus_ip, modbus_port, modbus_unit_id,
-           modo, calc_pulse_offset, plc_base_offset, plc_hil_act_rel,
-           plc_velocidad_rel, plc_hil_turno_rel, plc_set_rel, plc_hil_start_rel,
-           plc_coil_reset, plc_coil_fin_turno, activo, created_at, hil_acum_offset
-    FROM dbo.RCN_CONT_TELAR
-    WHERE telcod = @telcod
+    SELECT t.telcod, t.telnom, t.grupo, t.modbus_ip, t.modbus_port, t.modbus_unit_id,
+           t.modo, t.calc_pulse_offset, t.plc_base_offset, t.plc_hil_act_rel,
+           t.plc_velocidad_rel, t.plc_hil_turno_rel, t.plc_set_rel, t.plc_hil_start_rel,
+           t.plc_coil_reset, t.plc_coil_fin_turno, t.activo, t.created_at, t.hil_acum_offset,
+           r.tarjeta_display
+    FROM dbo.RCN_CONT_TELAR t
+    LEFT JOIN dbo.VW_RCN_CONT_RECOVERY r ON t.telcod = r.telcod
+    WHERE t.telcod = @telcod
   `, req => {
     req.input('telcod', sql.VarChar(10), telcod);
   });

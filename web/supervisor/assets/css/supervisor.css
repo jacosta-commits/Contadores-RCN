@@ -308,6 +308,14 @@ body {
     border: 1px solid #20324b;
 }
 
+.tarjeta-display {
+    font-size: clamp(14px, 2.6vw, 16px);
+    color: #bae6fd;
+    /* Ice Blue */
+    font-weight: 600;
+    letter-spacing: .3px;
+}
+
 /* Cabecera: operario + RESUMEN */
 .header {
     display: flex;

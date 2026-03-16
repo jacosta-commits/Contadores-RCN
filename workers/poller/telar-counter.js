@@ -40,6 +40,7 @@ class TelarCounter {
         this.traraz = null;
         this.turno_cod = null;
         this.inicio_dt = null;
+        this.tarjeta_display = null;
 
         // --- Persistence tracking ---
         this.ts = Date.now();
@@ -71,6 +72,7 @@ class TelarCounter {
         if (params.traraz !== undefined) this.traraz = params.traraz;
         if (params.turno_cod !== undefined) this.turno_cod = params.turno_cod;
         if (params.inicio_dt !== undefined) this.inicio_dt = params.inicio_dt;
+        if (params.tarjeta_display !== undefined) this.tarjeta_display = params.tarjeta_display;
 
         this.ts = Date.now();
         this.dirty = true;
@@ -272,6 +274,13 @@ class TelarCounter {
             changed = true;
         }
 
+        // 3. Detect Tarjeta Changes
+        if (srv.tarjeta_display !== undefined && srv.tarjeta_display !== this.tarjeta_display) {
+            logger.info(`[counter] syncFromServer ${this.telcod}: tarjeta changed ${this.tarjeta_display} → ${srv.tarjeta_display}`);
+            this.tarjeta_display = srv.tarjeta_display;
+            changed = true;
+        }
+
         // NOTE: hil_act, hil_turno, hil_start, set_value are NOT synced from DB.
         // The poller is authoritative for counter values.
         // Changes come ONLY through bridge events:
@@ -301,6 +310,7 @@ class TelarCounter {
             traraz: this._lastServerState.traraz,
             turno_cod: this._lastServerState.turno_cod,
             inicio_dt: this._lastServerState.inicio_dt,
+            tarjeta_display: this._lastServerState.tarjeta_display,
             updated_at: this._lastServerState.updated_at,
         };
     }
@@ -326,6 +336,7 @@ class TelarCounter {
             traraz: this.traraz,
             turno_cod: this.turno_cod,
             inicio_dt: this.inicio_dt,
+            tarjeta_display: this.tarjeta_display,
         };
     }
 
@@ -347,6 +358,7 @@ class TelarCounter {
             traraz: this.traraz,
             turno_cod: this.turno_cod,
             inicio_dt: this.inicio_dt,
+            tarjeta_display: this.tarjeta_display,
             ts: this.ts,
         };
     }
