@@ -639,21 +639,20 @@ GO
   SELECT * FROM (VALUES
     /* telcod, telnom       , modbus_ip        , port, unit, modo  , calc_pulse , plc_base , hil_act , vel , hil_turno , set , hil_start , coil_rst, coil_fin , activo */
 
-    -- === PLC (único) ===
+    -- === PLC (Directo) ===
     ('0069'  , 'Telar 69'   , '192.168.1.115'  , 502 , 1   , 'PLC' , NULL       , 20000    , 0       , 4   , 6         , 7   , 10        , 100     , 101      , 1),
+    ('2341'  , 'Telar 89'   , '192.168.1.42'   , 502 , 1   , 'PLC' , NULL       , 4000     , 0       , 80  , 4         , 8   , 2         , 100     , 101      , 1),
+    ('0070'  , 'Telar 70'   , '192.168.1.42'   , 502 , 1   , 'PLC' , NULL       , 4010     , 0       , 72  , 4         , 8   , 2         , 102     , 103      , 1),
+    ('0095'  , 'Telar 95'   , '192.168.1.42'   , 502 , 1   , 'PLC' , NULL       , 4020     , 0       , 64  , 4         , 8   , 2         , 104     , 105      , 1),
+    ('T011'  , 'Telar 11'   , '192.168.1.42'   , 502 , 1   , 'PLC' , NULL       , 4030     , 0       , 56  , 4         , 8   , 2         , 106     , 107      , 1),
+    ('T008'  , 'Telar 08'   , '192.168.1.42'   , 502 , 1   , 'PLC' , NULL       , 4040     , 0       , 48  , 4         , 8   , 2         , 108     , 109      , 1),
+    ('0096'  , 'Telar 96'   , '192.168.1.42'   , 502 , 1   , 'PLC' , NULL       , 4050     , 0       , 40  , 4         , 8   , 2         , 110     , 111      , 1),
+    ('T003'  , 'Telar 03'   , '192.168.1.42'   , 502 , 1   , 'PLC' , NULL       , 4060     , 0       , 32  , 4         , 8   , 2         , 112     , 113      , 1),
+    ('0097'  , 'Telar 97'   , '192.168.1.42'   , 502 , 1   , 'PLC' , NULL       , 4070     , 0       , 24  , 4         , 8   , 2         , 114     , 115      , 1),
 
     -- === CALC (delta) ===
-    ('T001'  , 'Telar 01'   , '192.168.1.41'   , 502 , 1   , 'CALC', 18         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('T002'  , 'Telar 02'   , '192.168.1.41'   , 502 , 1   , 'CALC', 20         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('T003'  , 'Telar 03'   , '192.168.1.42'   , 502 , 1   , 'CALC', 16         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('T004'  , 'Telar 04'   , '192.168.1.41'   , 502 , 1   , 'CALC', 2          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('T005'  , 'Telar 05'   , '192.168.1.41'   , 502 , 1   , 'CALC', 0          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('T006'  , 'Telar 06'   , '192.168.1.51'   , 502 , 1   , 'CALC', 0          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('T007'  , 'Telar 07'   , '192.168.1.51'   , 502 , 1   , 'CALC', 2          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('T008'  , 'Telar 08'   , '192.168.1.42'   , 502 , 1   , 'CALC', 10         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('T009'  , 'Telar 09'   , '192.168.1.51'   , 502 , 1   , 'CALC', 4          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('T010'  , 'Telar 10'   , '192.168.1.51'   , 502 , 1   , 'CALC', 6          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('T011'  , 'Telar 11'   , '192.168.1.42'   , 502 , 1   , 'CALC', 8          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
 
     ('0059'  , 'Telar 59'   , '192.168.1.47'   , 502 , 1   , 'CALC', 24         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('0060'  , 'Telar 60'   , '192.168.1.47'   , 502 , 1   , 'CALC', 26         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
@@ -668,17 +667,6 @@ GO
     ('0067'  , 'Telar 67'   , '192.168.1.52'   , 502 , 1   , 'CALC', 2          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('0068'  , 'Telar 68'   , '192.168.1.52'   , 502 , 1   , 'CALC', 0          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
 
-    ('0070'  , 'Telar 70'   , '192.168.1.42'   , 502 , 1   , 'CALC', 4          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-
-    -- Telar 74..79 (mapeado 2130..2135)
-    ('2130'  , 'Telar 74'   , '192.168.1.40'   , 502 , 1   , 'CALC', 4          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('2131'  , 'Telar 75'   , '192.168.1.40'   , 502 , 1   , 'CALC', 6          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('2132'  , 'Telar 76'   , '192.168.1.51'   , 502 , 1   , 'CALC', 20         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('2133'  , 'Telar 77'   , '192.168.1.40'   , 502 , 1   , 'CALC', 10         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('2134'  , 'Telar 78'   , '192.168.1.40'   , 502 , 1   , 'CALC', 12         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('2135'  , 'Telar 79'   , '192.168.1.41'   , 502 , 1   , 'CALC', 6          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-
-    -- Telar 81..89 (mapeado 2333..2341)
     ('2333'  , 'Telar 81'   , '192.168.1.40'   , 502 , 1   , 'CALC', 14         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('2334'  , 'Telar 82'   , '192.168.1.43'   , 502 , 1   , 'CALC', 14         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('2335'  , 'Telar 83'   , '192.168.1.43'   , 502 , 1   , 'CALC', 16         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
@@ -687,17 +675,12 @@ GO
     ('2338'  , 'Telar 86'   , '192.168.1.43'   , 502 , 1   , 'CALC', 22         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('2339'  , 'Telar 87'   , '192.168.1.40'   , 502 , 1   , 'CALC', 16         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('2340'  , 'Telar 88'   , '192.168.1.40'   , 502 , 1   , 'CALC', 18         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('2341'  , 'Telar 89'   , '192.168.1.42'   , 502 , 1   , 'CALC', 2          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
 
     ('0090'  , 'Telar 90'   , '192.168.1.41'   , 502 , 1   , 'CALC', 8          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('0091'  , 'Telar 91'   , '192.168.1.41'   , 502 , 1   , 'CALC', 10         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('0092'  , 'Telar 92'   , '192.168.1.41'   , 502 , 1   , 'CALC', 12         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('0093'  , 'Telar 93'   , '192.168.1.41'   , 502 , 1   , 'CALC', 14         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('0094'  , 'Telar 94'   , '192.168.1.41'   , 502 , 1   , 'CALC', 4          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-
-    ('0095'  , 'Telar 95'   , '192.168.1.42'   , 502 , 1   , 'CALC', 6          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('0096'  , 'Telar 96'   , '192.168.1.42'   , 502 , 1   , 'CALC', 12         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
-    ('0097'  , 'Telar 97'   , '192.168.1.42'   , 502 , 1   , 'CALC', 18         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
 
     ('0098'  , 'Telar 98'   , '192.168.1.40'   , 502 , 1   , 'CALC', 20         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('0099'  , 'Telar 99'   , '192.168.1.40'   , 502 , 1   , 'CALC', 22         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
