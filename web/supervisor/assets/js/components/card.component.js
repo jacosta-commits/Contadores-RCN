@@ -92,13 +92,10 @@ export function updateCard(telcod, data) {
   const valAct = document.getElementById(`val-act-${telcod}`);
   const valSet = document.getElementById(`val-set-${telcod}`);
 
-  // Start y Set no suelen cambiar rápido, pero podemos animar igual o dejar estático
-  if (valStart) valStart.textContent = z4(data.hil_start);
-  if (valSet) valSet.textContent = z4(data.set_value);
-
-  // Direct assignment — no tween (prevents jitter and interpolation on reset)
-  if (valTurno) valTurno.textContent = z4(data.hil_turno);
-  if (valAct) valAct.textContent = z4(data.hil_act);
+  if (valStart && data.hil_start !== undefined) valStart.textContent = z4(data.hil_start);
+  if (valSet && data.set_value !== undefined) valSet.textContent = z4(data.set_value);
+  if (valTurno && data.hil_turno !== undefined) valTurno.textContent = z4(data.hil_turno);
+  if (valAct && data.hil_act !== undefined) valAct.textContent = z4(data.hil_act);
 
   // 3. Operario / Sesión
   const opEl = document.getElementById(`operario-${telcod}`);

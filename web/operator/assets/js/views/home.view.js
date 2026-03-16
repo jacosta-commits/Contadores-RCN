@@ -65,12 +65,13 @@ export function render(container) {
 
 export function patchByTelar(telcod, payload = {}) {
   const p = idPrefixFor(telcod);
+  const prev = store.counters[telcod] || {};
   const vals = {
-    hil_start: payload.hil_start ?? payload.hil_inicio ?? payload.hilInicio ?? 0,
-    hil_turno: payload.hil_turno ?? payload.hilTurno ?? 0,
-    hil_act: payload.hil_act ?? payload.hilActual ?? payload.hil_acum ?? 0,
-    set_value: payload.set_value ?? payload.set ?? payload.hil_total ?? payload.total ?? 0,
-    tarjeta: payload.tarjeta_display ?? payload.tarjeta ?? '',
+    hil_start: payload.hil_start ?? payload.hil_inicio ?? payload.hilInicio ?? prev.hil_start ?? 0,
+    hil_turno: payload.hil_turno ?? payload.hilTurno ?? prev.hil_turno ?? 0,
+    hil_act: payload.hil_act ?? payload.hilActual ?? payload.hil_acum ?? prev.hil_act ?? 0,
+    set_value: payload.set_value ?? payload.set ?? payload.hil_total ?? payload.total ?? prev.set_value ?? 0,
+    tarjeta: payload.tarjeta_display ?? payload.tarjeta ?? prev.tarjeta ?? '',
   };
   // cache para modales/resumen
   store.counters = store.counters || {};

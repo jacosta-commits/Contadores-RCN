@@ -667,6 +667,14 @@ GO
     ('0067'  , 'Telar 67'   , '192.168.1.52'   , 502 , 1   , 'CALC', 2          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('0068'  , 'Telar 68'   , '192.168.1.52'   , 502 , 1   , 'CALC', 0          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
 
+    -- Telar 74..79 (mapeado 2130..2135)
+    ('2130'  , 'Telar 74'   , '192.168.1.40'   , 502 , 1   , 'CALC', 4          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
+    ('2131'  , 'Telar 75'   , '192.168.1.40'   , 502 , 1   , 'CALC', 6          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
+    ('2132'  , 'Telar 76'   , '192.168.1.51'   , 502 , 1   , 'CALC', 20         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 0),
+    ('2133'  , 'Telar 77'   , '192.168.1.40'   , 502 , 1   , 'CALC', 10         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 0),
+    ('2134'  , 'Telar 78'   , '192.168.1.40'   , 502 , 1   , 'CALC', 12         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
+    ('2135'  , 'Telar 79'   , '192.168.1.41'   , 502 , 1   , 'CALC', 6          , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
+
     ('2333'  , 'Telar 81'   , '192.168.1.40'   , 502 , 1   , 'CALC', 14         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('2334'  , 'Telar 82'   , '192.168.1.43'   , 502 , 1   , 'CALC', 14         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),
     ('2335'  , 'Telar 83'   , '192.168.1.43'   , 502 , 1   , 'CALC', 16         , NULL     , NULL    , NULL, NULL      , NULL, NULL      , NULL    , NULL     , 1),

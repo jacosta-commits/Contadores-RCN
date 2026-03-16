@@ -32,7 +32,8 @@ async function resetCounter(telcod) {
         bus.telar.state(telcod, {
             telcod,
             hil_act: 0,
-            hil_turno: currentCache.hil_turno ?? 0,  // PRESERVE hil_turno in UI
+            hil_turno: currentCache.hil_turno ?? 0,
+            set_value: currentCache.set_value ?? 0, // Include SET to prevent UI reset
             velocidad: currentCache.velocidad ?? 0,
         });
     } catch (e) {
