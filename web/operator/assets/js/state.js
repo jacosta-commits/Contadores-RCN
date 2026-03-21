@@ -1,6 +1,17 @@
 /** Estado global muy simple con pub/sub y persistencia localStorage */
 const LS_SESSION = 'op.session';
 const LS_TELARES = 'op.telares';
+const CK_TELARES = 'op_telares'; // Cookie backup para telares (sobrevive reinicios de tablet)
+
+// --- Cookie helpers ---
+function setCookie(name, value, days = 365) {
+  const d = new Date(); d.setTime(d.getTime() + days * 86400000);
+  document.cookie = `${name}=${encodeURIComponent(value)};expires=${d.toUTCString()};path=/;SameSite=Lax`;
+}
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : null;
+}
 
 class Emitter {
   constructor() { this.map = new Map(); }
@@ -19,10 +30,19 @@ export const store = {
   load() {
     try { this.session = JSON.parse(localStorage.getItem(LS_SESSION)) || null; } catch { }
     try { this.telares = JSON.parse(localStorage.getItem(LS_TELARES)) || []; } catch { }
+    // Fallback: si localStorage no tiene telares, intentar cookie
+    if (this.telares.length === 0) {
+      try {
+        const ck = getCookie(CK_TELARES);
+        if (ck) this.telares = JSON.parse(ck) || [];
+      } catch { }
+    }
   },
   save() {
     localStorage.setItem(LS_SESSION, JSON.stringify(this.session));
     localStorage.setItem(LS_TELARES, JSON.stringify(this.telares));
+    // Guardar telares también en cookie como respaldo
+    setCookie(CK_TELARES, JSON.stringify(this.telares));
   },
 
   // ---- sesión (NO afecta telares) ----
