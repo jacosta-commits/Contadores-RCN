@@ -167,6 +167,18 @@ async function bootstrap() {
       if (!sessData || sessData.activo === 0 || sessData.activo === false) {
         throw new Error('Sesión inactiva en servidor');
       }
+      // Recuperar telares del servidor si localStorage los perdió (ej: reinicio de tablet)
+      if (store.telares.length === 0) {
+        try {
+          const activos = await api.sesionTelar.listActivos(store.session.sescod);
+          if (Array.isArray(activos) && activos.length > 0) {
+            console.info('[app] Telares recuperados del servidor:', activos.map(t => t.telcod || t));
+            store.setTelares(activos);
+            renderHome($('#app'));
+          }
+        } catch (e) { console.warn('[app] No se pudieron recuperar telares del servidor:', e.message); }
+      }
+
       Layout.showSingleLayout(); // Por defecto single si ya hay sesión
       refreshPendingCount();
     } catch (e) {
