@@ -640,7 +640,7 @@ GO
     /* telcod, telnom       , modbus_ip        , port, unit, modo  , calc_pulse , plc_base , hil_act , vel , hil_turno , set , hil_start , coil_rst, coil_fin , activo */
 
     -- === PLC (Directo) ===
-    ('0069'  , 'Telar 69'   , '192.168.1.122'  , 502 , 1   , 'PLC' , NULL       , 4000     , 0       , 80  , 4         , 8   , 2         , 100     , 101      , 1),
+    ('0069'  , 'Telar 69'   , '192.168.1.122'  , 502 , 1   , 'PLC' , NULL       , 20000    , 0       , 4   , 6         , 7   , 10        , 100     , 101      , 1),
     ('2341'  , 'Telar 89'   , '192.168.1.42'   , 502 , 1   , 'PLC' , NULL       , 4000     , 0       , 80  , 4         , 8   , 2         , 100     , 101      , 1),
     ('0070'  , 'Telar 70'   , '192.168.1.42'   , 502 , 1   , 'PLC' , NULL       , 4010     , 0       , 72  , 4         , 8   , 2         , 102     , 103      , 1),
     ('0095'  , 'Telar 95'   , '192.168.1.42'   , 502 , 1   , 'PLC' , NULL       , 4020     , 0       , 64  , 4         , 8   , 2         , 104     , 105      , 1),
