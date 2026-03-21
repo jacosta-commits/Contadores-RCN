@@ -47,7 +47,7 @@ async function cerrar({ sescod, fin = null }) {
           ts: fin || new Date(),
           hil_act: cacheState.hil_act,
           hil_turno: cacheState.hil_turno,
-          hil_start: cacheState.hil_start,
+          hil_start: cacheState.hil_act,  // CORREGIDO: guardar hil_act como nuevo hil_start (valor actualizado post-cierre)
           set_value: cacheState.set_value,
           tracod: cacheState.tracod
         });

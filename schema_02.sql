@@ -537,6 +537,57 @@ JOIN dbo.RCN_CONT_SESION s
 GO
 
 
+-- ------------------------------------------------------------
+-- Resumen detallado de hileras por sesión (H. INICIO TURNO)
+-- ------------------------------------------------------------
+CREATE OR ALTER VIEW dbo.VW_RCN_CONT_HILERAS_RESUMEN
+AS
+SELECT
+    oxs.tracod,
+    oxs.traraz,
+    oxs.sescod,
+    oxs.turno_cod,
+    oxs.telcod,
+    
+    -- Datos de la operación
+    op_info.tarjeta,
+    op_info.otcod          AS OT,
+
+    oxs.sesion_inicio_real AS sesion_inicio,
+    oxs.sesion_fin_real    AS sesion_fin,
+    
+    -- H. INICIO TURNO: hil_start al empezar
+    inicio.hil_start       AS [H.INICIO TURNO (AL INICIO)],
+
+    -- H. INICIO TURNO: hil_act al cerrar (se convierte en el inicio del siguiente)
+    CASE 
+        WHEN oxs.sesion_fin_real IS NULL THEN NULL 
+        ELSE fin.hil_act 
+    END                    AS [H.INICIO TURNO (AL FINAL)]
+
+FROM dbo.VW_RCN_CONT_OPERACION_X_SESION oxs
+-- Jalamos la info de la tarjeta/OT del primer batch de la operación
+OUTER APPLY (
+    SELECT TOP 1 i.tarjeta, i.otcod
+    FROM dbo.RCN_CONT_OPERACION_ITEM i
+    WHERE i.opid = oxs.opid
+    ORDER BY i.batch ASC
+) op_info
+OUTER APPLY (
+    SELECT TOP 1 l.hil_start
+    FROM dbo.RCN_CONT_LECTURA l
+    WHERE l.sescod = oxs.sescod AND l.telcod = oxs.telcod
+    ORDER BY l.ts ASC
+) inicio
+OUTER APPLY (
+    SELECT TOP 1 l.hil_act
+    FROM dbo.RCN_CONT_LECTURA l
+    WHERE l.sescod = oxs.sescod AND l.telcod = oxs.telcod
+    ORDER BY l.ts DESC
+) fin;
+GO
+
+
 /* ============================================================
 GUÍA DE INTERPRETACIÓN RÁPIDA
 ---------------------------------------------------------------
